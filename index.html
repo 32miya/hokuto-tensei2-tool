@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>北斗の拳 転生の章2 攻略ツール</title>
+<style>
+  :root{
+    --bg:#120608;
+    --panel:#1c0d10;
+    --panel2:#241014;
+    --red:#e2312a;
+    --red-dark:#8f1c17;
+    --gold:#e0a83c;
+    --text:#f2e6e2;
+    --sub:#b58e88;
+    --line:#3a1e1f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:radial-gradient(ellipse at top, #2a1013 0%, #120608 60%);
+    color:var(--text);
+    font-family:"Hiragino Sans","Yu Gothic",system-ui,-apple-system,sans-serif;
+    min-height:100vh;
+    padding:16px 12px 60px;
+  }
+  .wrap{max-width:520px;margin:0 auto;}
+  header{text-align:center;margin-bottom:14px;}
+  header h1{
+    font-size:1.35rem;margin:0 0 4px;
+    color:var(--gold);
+    letter-spacing:0.03em;
+    text-shadow:0 0 10px rgba(224,168,60,0.35);
+  }
+  header .note{font-size:0.72rem;color:var(--sub);line-height:1.5;}
+  .card{
+    background:linear-gradient(180deg,var(--panel2),var(--panel));
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:14px;
+    margin-bottom:14px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.35);
+  }
+  .card h2{
+    font-size:0.9rem;margin:0 0 10px;color:var(--red);
+    display:flex;align-items:center;gap:6px;
+  }
+  .row{display:flex;gap:8px;}
+  input[type=number]{
+    flex:1;min-width:0;
+    background:#0e0506;border:1px solid var(--line);
+    color:var(--text);font-size:1.1rem;
+    padding:12px 10px;border-radius:10px;
+    text-align:center;
+  }
+  input[type=number]:focus{outline:2px solid var(--red);}
+  button{
+    border:none;border-radius:10px;
+    font-size:0.95rem;font-weight:700;
+    padding:12px 16px;cursor:pointer;
+    transition:transform 0.1s ease, opacity 0.15s ease;
+  }
+  button:active{transform:scale(0.96);}
+  .btn-main{background:linear-gradient(180deg,var(--red),var(--red-dark));color:#fff;}
+  .btn-sub{background:#2a1518;color:var(--sub);border:1px solid var(--line);}
+  .btn-danger{background:transparent;color:var(--red);border:1px solid var(--red-dark);width:100%;margin-top:8px;}
+  .btn-undo{background:transparent;color:var(--sub);border:1px solid var(--line);}
+  .hint{font-size:0.72rem;color:var(--sub);margin-top:6px;}
+
+  .state-list{display:flex;flex-direction:column;gap:8px;}
+  .state-row{display:flex;align-items:center;gap:10px;}
+  .state-label{width:64px;flex-shrink:0;font-size:0.85rem;font-weight:700;}
+  .state-bar-bg{flex:1;background:#0e0506;border-radius:8px;height:20px;overflow:hidden;position:relative;border:1px solid var(--line);}
+  .state-bar-fill{height:100%;border-radius:8px 0 0 8px;transition:width .3s ease;}
+  .state-pct{width:52px;text-align:right;font-size:0.85rem;font-variant-numeric:tabular-nums;}
+  .fill-A{background:linear-gradient(90deg,#5b7fae,#3a577f);}
+  .fill-B{background:linear-gradient(90deg,#5a9e6f,#357049);}
+  .fill-C{background:linear-gradient(90deg,var(--gold),#a5761f);}
+  .fill-T{background:linear-gradient(90deg,var(--red),#ff6a5e);}
+  .best-tag{
+    display:inline-block;margin-top:10px;
+    background:rgba(224,168,60,0.12);border:1px solid var(--gold);
+    color:var(--gold);font-size:0.8rem;padding:6px 10px;border-radius:8px;
+  }
+
+  .pred-list{display:flex;flex-direction:column;gap:6px;}
+  .pred-item{
+    display:flex;justify-content:space-between;align-items:center;
+    background:#0e0506;border:1px solid var(--line);border-radius:8px;
+    padding:8px 12px;font-size:0.88rem;
+  }
+  .pred-item .rank{color:var(--gold);font-weight:700;margin-right:8px;}
+  .pred-item .pct{color:var(--sub);font-variant-numeric:tabular-nums;}
+
+  .shutter-check{margin-top:12px;}
+  .shutter-badge{
+    display:none;margin-top:10px;padding:10px 12px;border-radius:10px;
+    background:linear-gradient(90deg,rgba(224,49,42,0.25),rgba(224,168,60,0.2));
+    border:1px solid var(--gold);color:var(--gold);font-size:0.85rem;
+    animation:pulse 1.4s infinite;
+  }
+  .shutter-badge.show{display:block;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.55;}}
+
+  details{background:#0e0506;border:1px solid var(--line);border-radius:10px;padding:8px 12px;}
+  summary{cursor:pointer;color:var(--sub);font-size:0.82rem;}
+  details p{font-size:0.78rem;line-height:1.7;color:var(--text);margin:8px 0 0;}
+  details ul{font-size:0.78rem;line-height:1.7;color:var(--text);margin:8px 0 0;padding-left:1.1em;}
+
+  .history{display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;}
+  .history span{
+    background:#0e0506;border:1px solid var(--line);border-radius:6px;
+    padding:4px 8px;font-size:0.78rem;color:var(--sub);
+  }
+  .empty{color:var(--sub);font-size:0.8rem;text-align:center;padding:8px 0;}
+  footer{text-align:center;font-size:0.68rem;color:#6b4d49;margin-top:18px;line-height:1.6;}
+  footer a{color:#8a6560;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>北斗の拳 転生の章2　攻略ツール</h1>
+    <div class="note">
+      規定あべし振り分け（設定変更時以外・設定1）を基にした簡易状態推定ツール。<br>
+      ※「天性の章2」は正式名称「転生の章2」の可能性があります。データ取得元: p-town.dmm.com
+    </div>
+  </header>
+
+  <div class="card">
+    <h2>① あべし当選ゲーム数を登録</h2>
+    <div class="row">
+      <input type="number" id="inputG" inputmode="numeric" placeholder="例: 213" min="1">
+      <button class="btn-main" id="btnAdd">登録</button>
+    </div>
+    <div class="hint">当選する度に入力→登録。データは自動保存され、次回起動時も引き継がれます。</div>
+    <div class="row" style="margin-top:8px;">
+      <button class="btn-undo" id="btnUndo" style="flex:1;">直前を取り消す</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>② 現在の推定状態</h2>
+    <div class="state-list" id="stateList"></div>
+    <div id="bestTag"></div>
+  </div>
+
+  <div class="card">
+    <h2>③ 次あべし当選ゲーム数（有力レンジ TOP3）</h2>
+    <div class="pred-list" id="predList"></div>
+    <div class="hint">現在の推定状態を踏まえた、次にあべし当選が来やすいゲーム数帯です。</div>
+  </div>
+
+  <div class="card">
+    <h2>④ モードC シャッターチェック</h2>
+    <div class="row shutter-check">
+      <input type="number" id="inputCurrentG" inputmode="numeric" placeholder="現在の経過ゲーム数（任意）" min="0">
+    </div>
+    <div class="shutter-badge" id="shutterBadge">
+      ⚡ シャッターチャンス区間です！ ここでシャッター演出が出現した場合、モードC＆高確率が濃厚です。
+    </div>
+    <details style="margin-top:10px;">
+      <summary>モードCの法則について</summary>
+      <p>モードCは <b>37〜38ゲーム目</b> または <b>43〜45ゲーム目</b> でシャッター演出が発生することがあり、これが出現した場合は高確率状態が示唆されます。上のゲーム数欄に経過ゲーム数を入れると自動で判定します。</p>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>履歴（<span id="histCount">0</span>件）</h2>
+    <div class="history" id="historyList"><div class="empty">まだデータがありません</div></div>
+    <button class="btn-danger" id="btnClear">🔄 台移動・データを全クリア</button>
+  </div>
+
+  <footer>
+    参考値です。実機の挙動を保証するものではありません。台移動・電源再投入時は必ずクリアしてください。<br>
+    データ出典: <a href="https://p-town.dmm.com/machines/4909" target="_blank" rel="noopener">p-town.dmm.com</a>（設定1 / 設定変更時以外）
+  </footer>
+</div>
+
+<script>
+// 規定あべし振り分け（設定変更時以外・設定1） 64G刻み 24バケット（1〜1536G）
+// 各値は% （"ー"は0として扱う）
+const DATA = {
+  A: [0.20,1.37,0.31,21.94,0.12,0.73,0.12,0.12,5.60,0.11,0.12,1.40,0.11,5.71,0.11,0.71,0.12,0.73,0.12,10.99,3.40,15.11,29.30,1.45],
+  B: [0.21,1.49,0.37,26.59,0.73,4.41,0.02,0.02,0.98,0.99,1.01,12.23,1.00,49.93,0,0,0,0,0,0,0,0,0,0],
+  C: [0.03,0.20,0.40,28.81,0.45,2.70,1.41,1.38,64.64,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+  T: [12.50,87.50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+};
+const MODES = ['A','B','C','T'];
+const MODE_LABEL = {A:'通常A', B:'通常B', C:'通常C', T:'天国'};
+const BUCKET_COUNT = 24;
+const STORAGE_KEY = 'hokuto_tensei2_abeshi_history_v1';
+
+function bucketIndex(g){
+  if(!Number.isFinite(g) || g < 1) return null;
+  const idx = Math.floor((g - 1) / 64);
+  return Math.min(idx, BUCKET_COUNT - 1);
+}
+function rangeLabel(idx){
+  return `${idx*64+1}〜${idx*64+64}G`;
+}
+
+function loadHistory(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+function saveHistory(h){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(h));
+}
+
+function computePosterior(history){
+  let post = {A:0.25,B:0.25,C:0.25,T:0.25};
+  for(const g of history){
+    const idx = bucketIndex(g);
+    if(idx === null) continue;
+    const lik = {};
+    let anyNonzero = false;
+    for(const m of MODES){
+      lik[m] = DATA[m][idx] / 100;
+      if(lik[m] > 0) anyNonzero = true;
+    }
+    if(!anyNonzero) continue; // 全モードで想定外のレンジ→このデータはスキップ
+    let sum = 0;
+    const next = {};
+    for(const m of MODES){
+      next[m] = post[m] * lik[m];
+      sum += next[m];
+    }
+    if(sum <= 0){
+      const nz = MODES.filter(m => lik[m] > 0);
+      const each = 1 / nz.length;
+      post = {A:0,B:0,C:0,T:0};
+      nz.forEach(m => post[m] = each);
+    } else {
+      for(const m of MODES) post[m] = next[m] / sum;
+    }
+  }
+  return post;
+}
+
+function predictTop3(post){
+  const mix = new Array(BUCKET_COUNT).fill(0);
+  for(let idx=0; idx<BUCKET_COUNT; idx++){
+    for(const m of MODES){
+      mix[idx] += post[m] * (DATA[m][idx] / 100);
+    }
+  }
+  return mix.map((v,i)=>({i,v})).sort((a,b)=>b.v-a.v).slice(0,3);
+}
+
+function render(){
+  const history = loadHistory();
+  const post = computePosterior(history);
+
+  const stateList = document.getElementById('stateList');
+  stateList.innerHTML = '';
+  let bestMode = null, bestVal = -1;
+  for(const m of MODES){
+    if(post[m] > bestVal){ bestVal = post[m]; bestMode = m; }
+    const pct = (post[m]*100).toFixed(1);
+    const row = document.createElement('div');
+    row.className = 'state-row';
+    row.innerHTML = `
+      <div class="state-label">${MODE_LABEL[m]}</div>
+      <div class="state-bar-bg"><div class="state-bar-fill fill-${m}" style="width:${pct}%"></div></div>
+      <div class="state-pct">${pct}%</div>
+    `;
+    stateList.appendChild(row);
+  }
+  document.getElementById('bestTag').innerHTML = history.length
+    ? `<span class="best-tag">現在の推定：${MODE_LABEL[bestMode]}（${(bestVal*100).toFixed(1)}%）</span>`
+    : `<span class="best-tag">データなし（均等表示中）</span>`;
+
+  const predList = document.getElementById('predList');
+  predList.innerHTML = '';
+  predictTop3(post).forEach((p, i) => {
+    const div = document.createElement('div');
+    div.className = 'pred-item';
+    div.innerHTML = `<span><span class="rank">${i+1}位</span>${rangeLabel(p.i)}</span><span class="pct">${(p.v*100).toFixed(1)}%</span>`;
+    predList.appendChild(div);
+  });
+
+  const histList = document.getElementById('historyList');
+  document.getElementById('histCount').textContent = history.length;
+  if(history.length === 0){
+    histList.innerHTML = '<div class="empty">まだデータがありません</div>';
+  } else {
+    histList.innerHTML = history.map(g => `<span>${g}G</span>`).join('');
+  }
+}
+
+document.getElementById('btnAdd').addEventListener('click', () => {
+  const input = document.getElementById('inputG');
+  const g = parseInt(input.value, 10);
+  if(!Number.isFinite(g) || g < 1){ input.focus(); return; }
+  const history = loadHistory();
+  history.push(g);
+  saveHistory(history);
+  input.value = '';
+  input.focus();
+  render();
+});
+document.getElementById('inputG').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') document.getElementById('btnAdd').click();
+});
+
+document.getElementById('btnUndo').addEventListener('click', () => {
+  const history = loadHistory();
+  if(history.length === 0) return;
+  history.pop();
+  saveHistory(history);
+  render();
+});
+
+document.getElementById('btnClear').addEventListener('click', () => {
+  if(!confirm('台移動しますか？累積データを全て消去します。')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  render();
+});
+
+const inputCurrentG = document.getElementById('inputCurrentG');
+const shutterBadge = document.getElementById('shutterBadge');
+function checkShutter(){
+  const g = parseInt(inputCurrentG.value, 10);
+  const inZone = Number.isFinite(g) && ((g >= 37 && g <= 38) || (g >= 43 && g <= 45));
+  shutterBadge.classList.toggle('show', inZone);
+}
+inputCurrentG.addEventListener('input', checkShutter);
+
+render();
+</script>
+</body>
+</html>
