@@ -42,6 +42,7 @@
     margin-bottom:14px;
     box-shadow:0 4px 14px rgba(0,0,0,0.35);
   }
+  .card.primary{border-color:var(--gold);}
   .card h2{
     font-size:0.9rem;margin:0 0 10px;color:var(--red);
     display:flex;align-items:center;gap:6px;
@@ -50,7 +51,7 @@
   input[type=number]{
     flex:1;min-width:0;
     background:#0e0506;border:1px solid var(--line);
-    color:var(--text);font-size:1.1rem;
+    color:var(--text);font-size:1.4rem;font-weight:700;
     padding:12px 10px;border-radius:10px;
     text-align:center;
   }
@@ -63,10 +64,13 @@
   }
   button:active{transform:scale(0.96);}
   .btn-main{background:linear-gradient(180deg,var(--red),var(--red-dark));color:#fff;}
+  .btn-gold{background:linear-gradient(180deg,var(--gold),#a5761f);color:#241014;}
   .btn-sub{background:#2a1518;color:var(--sub);border:1px solid var(--line);}
   .btn-danger{background:transparent;color:var(--red);border:1px solid var(--red-dark);width:100%;margin-top:8px;}
   .btn-undo{background:transparent;color:var(--sub);border:1px solid var(--line);}
+  .btn-step{background:#2a1518;color:var(--gold);border:1px solid var(--line);width:56px;font-size:1.1rem;flex:0 0 auto;}
   .hint{font-size:0.72rem;color:var(--sub);margin-top:6px;}
+  .warn{font-size:0.75rem;color:var(--gold);margin-top:8px;}
 
   .state-list{display:flex;flex-direction:column;gap:8px;}
   .state-row{display:flex;align-items:center;gap:10px;}
@@ -93,7 +97,6 @@
   .pred-item .rank{color:var(--gold);font-weight:700;margin-right:8px;}
   .pred-item .pct{color:var(--sub);font-variant-numeric:tabular-nums;}
 
-  .shutter-check{margin-top:12px;}
   .shutter-badge{
     display:none;margin-top:10px;padding:10px 12px;border-radius:10px;
     background:linear-gradient(90deg,rgba(224,49,42,0.25),rgba(224,168,60,0.2));
@@ -103,7 +106,7 @@
   .shutter-badge.show{display:block;}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.55;}}
 
-  details{background:#0e0506;border:1px solid var(--line);border-radius:10px;padding:8px 12px;}
+  details{background:#0e0506;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-top:10px;}
   summary{cursor:pointer;color:var(--sub);font-size:0.82rem;}
   details p{font-size:0.78rem;line-height:1.7;color:var(--text);margin:8px 0 0;}
   details ul{font-size:0.78rem;line-height:1.7;color:var(--text);margin:8px 0 0;padding-left:1.1em;}
@@ -128,15 +131,23 @@
     </div>
   </header>
 
-  <div class="card">
-    <h2>① あべし当選ゲーム数を登録</h2>
+  <div class="card primary">
+    <h2>① 現在のあべし数（経過ゲーム数）</h2>
     <div class="row">
-      <input type="number" id="inputG" inputmode="numeric" placeholder="例: 213" min="1">
-      <button class="btn-main" id="btnAdd">登録</button>
+      <button class="btn-step" id="btnMinus">−1</button>
+      <input type="number" id="inputCurrentG" inputmode="numeric" placeholder="0" min="0">
+      <button class="btn-step" id="btnPlus">＋1</button>
     </div>
-    <div class="hint">当選する度に入力→登録。データは自動保存され、次回起動時も引き継がれます。</div>
-    <div class="row" style="margin-top:8px;">
-      <button class="btn-undo" id="btnUndo" style="flex:1;">直前を取り消す</button>
+    <div class="hint">まだ当選していない現在のゲーム数を入力・更新すると、②③がリアルタイムで再計算されます。</div>
+    <div class="shutter-badge" id="shutterBadge">
+      ⚡ シャッターチャンス区間です！ ここでシャッター演出が出現した場合、モードC＆高確率が濃厚です。
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <button class="btn-gold" id="btnRegister" style="flex:1;">🎯 あべし成立！記録してリセット</button>
+    </div>
+    <div class="hint">当選したらこのボタンで履歴に記録し、現在のゲーム数を0に戻します。</div>
+    <div class="warn" id="outOfRangeWarn" style="display:none;">
+      ⚠ 想定データ範囲（〜1536G）を超えています。参考値は均等表示になります。
     </div>
   </div>
 
@@ -144,31 +155,26 @@
     <h2>② 現在の推定状態</h2>
     <div class="state-list" id="stateList"></div>
     <div id="bestTag"></div>
+    <div class="hint">「その回数まで当選していない」という事実から、まだ生き残っている可能性が高いモードを都度計算しています（当選履歴の積み上げではありません）。</div>
   </div>
 
   <div class="card">
     <h2>③ 次あべし当選ゲーム数（有力レンジ TOP3）</h2>
     <div class="pred-list" id="predList"></div>
-    <div class="hint">現在の推定状態を踏まえた、次にあべし当選が来やすいゲーム数帯です。</div>
+    <div class="hint">現在のゲーム数より後のレンジのみを対象に、②の推定状態を踏まえて算出しています。</div>
   </div>
 
-  <div class="card">
-    <h2>④ モードC シャッターチェック</h2>
-    <div class="row shutter-check">
-      <input type="number" id="inputCurrentG" inputmode="numeric" placeholder="現在の経過ゲーム数（任意）" min="0">
-    </div>
-    <div class="shutter-badge" id="shutterBadge">
-      ⚡ シャッターチャンス区間です！ ここでシャッター演出が出現した場合、モードC＆高確率が濃厚です。
-    </div>
-    <details style="margin-top:10px;">
-      <summary>モードCの法則について</summary>
-      <p>モードCは <b>37〜38ゲーム目</b> または <b>43〜45ゲーム目</b> でシャッター演出が発生することがあり、これが出現した場合は高確率状態が示唆されます。上のゲーム数欄に経過ゲーム数を入れると自動で判定します。</p>
-    </details>
-  </div>
+  <details class="card" style="margin-bottom:14px;">
+    <summary>モードCの法則について</summary>
+    <p>モードCは <b>37〜38ゲーム目</b> または <b>43〜45ゲーム目</b> でシャッター演出が発生することがあり、これが出現した場合は高確率状態が示唆されます。①のゲーム数欄がこの区間に入ると自動でバッジが表示されます。</p>
+  </details>
 
   <div class="card">
     <h2>履歴（<span id="histCount">0</span>件）</h2>
     <div class="history" id="historyList"><div class="empty">まだデータがありません</div></div>
+    <div class="row" style="margin-top:8px;">
+      <button class="btn-undo" id="btnUndo" style="flex:1;">直前の記録を取り消す</button>
+    </div>
     <button class="btn-danger" id="btnClear">🔄 台移動・データを全クリア</button>
   </div>
 
@@ -190,77 +196,95 @@ const DATA = {
 const MODES = ['A','B','C','T'];
 const MODE_LABEL = {A:'通常A', B:'通常B', C:'通常C', T:'天国'};
 const BUCKET_COUNT = 24;
-const STORAGE_KEY = 'hokuto_tensei2_abeshi_history_v1';
+const STORAGE_KEY_HISTORY = 'hokuto_tensei2_abeshi_history_v1';
+const STORAGE_KEY_CURRENT = 'hokuto_tensei2_current_g_v1';
 
-function bucketIndex(g){
-  if(!Number.isFinite(g) || g < 1) return null;
-  const idx = Math.floor((g - 1) / 64);
-  return Math.min(idx, BUCKET_COUNT - 1);
-}
 function rangeLabel(idx){
   return `${idx*64+1}〜${idx*64+64}G`;
 }
 
 function loadHistory(){
   try{
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY_HISTORY);
     return raw ? JSON.parse(raw) : [];
   }catch(e){ return []; }
 }
 function saveHistory(h){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(h));
+  localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(h));
+}
+function loadCurrentG(){
+  const raw = localStorage.getItem(STORAGE_KEY_CURRENT);
+  const g = parseInt(raw, 10);
+  return Number.isFinite(g) && g >= 0 ? g : 0;
+}
+function saveCurrentG(g){
+  localStorage.setItem(STORAGE_KEY_CURRENT, String(g));
 }
 
-function computePosterior(history){
-  let post = {A:0.25,B:0.25,C:0.25,T:0.25};
-  for(const g of history){
-    const idx = bucketIndex(g);
-    if(idx === null) continue;
-    const lik = {};
-    let anyNonzero = false;
-    for(const m of MODES){
-      lik[m] = DATA[m][idx] / 100;
-      if(lik[m] > 0) anyNonzero = true;
+// 現在のゲーム数までまだ当選していない、という条件付き確率（生存確率）でモードを推定する。
+// 過去の当選履歴は「モードが再抽選された別セッションの結果」なので、今回の推定には使わない。
+function computeLive(currentG){
+  const idx = Math.min(Math.max(Math.floor(currentG / 64), 0), BUCKET_COUNT - 1);
+  const bucketTop = (idx + 1) * 64;
+  const remainFrac = Math.min(Math.max((bucketTop - currentG) / 64, 0), 1);
+  const prior = {A:0.25,B:0.25,C:0.25,T:0.25};
+  const survival = {};
+  for(const m of MODES){
+    let s = remainFrac * (DATA[m][idx] / 100);
+    for(let i = idx + 1; i < BUCKET_COUNT; i++){
+      s += DATA[m][i] / 100;
     }
-    if(!anyNonzero) continue; // 全モードで想定外のレンジ→このデータはスキップ
-    let sum = 0;
-    const next = {};
-    for(const m of MODES){
-      next[m] = post[m] * lik[m];
-      sum += next[m];
-    }
-    if(sum <= 0){
-      const nz = MODES.filter(m => lik[m] > 0);
-      const each = 1 / nz.length;
-      post = {A:0,B:0,C:0,T:0};
-      nz.forEach(m => post[m] = each);
-    } else {
-      for(const m of MODES) post[m] = next[m] / sum;
-    }
+    survival[m] = s;
   }
-  return post;
+  let sum = 0;
+  const post = {};
+  for(const m of MODES){ post[m] = prior[m] * survival[m]; sum += post[m]; }
+  let outOfRange = false;
+  if(sum <= 0){
+    outOfRange = true;
+    for(const m of MODES) post[m] = 0.25;
+  } else {
+    for(const m of MODES) post[m] = post[m] / sum;
+  }
+  return {idx, remainFrac, survival, post, outOfRange};
 }
 
-function predictTop3(post){
+function predictTop3Live(live){
+  const {idx, remainFrac, survival, post} = live;
   const mix = new Array(BUCKET_COUNT).fill(0);
-  for(let idx=0; idx<BUCKET_COUNT; idx++){
-    for(const m of MODES){
-      mix[idx] += post[m] * (DATA[m][idx] / 100);
+  for(const m of MODES){
+    if(survival[m] <= 0) continue;
+    for(let i = idx; i < BUCKET_COUNT; i++){
+      const raw = (i === idx) ? remainFrac * (DATA[m][i] / 100) : (DATA[m][i] / 100);
+      mix[i] += post[m] * (raw / survival[m]);
     }
   }
-  return mix.map((v,i)=>({i,v})).sort((a,b)=>b.v-a.v).slice(0,3);
+  return mix
+    .map((v, i) => ({i, v}))
+    .filter(p => p.i >= idx && p.v > 0)
+    .sort((a, b) => b.v - a.v)
+    .slice(0, 3);
 }
 
 function render(){
-  const history = loadHistory();
-  const post = computePosterior(history);
+  const currentG = loadCurrentG();
+  const inputCurrentG = document.getElementById('inputCurrentG');
+  if(document.activeElement !== inputCurrentG){
+    inputCurrentG.value = currentG || '';
+  }
+
+  const inZone = (currentG >= 37 && currentG <= 38) || (currentG >= 43 && currentG <= 45);
+  document.getElementById('shutterBadge').classList.toggle('show', inZone);
+
+  const live = computeLive(currentG);
+  document.getElementById('outOfRangeWarn').style.display = live.outOfRange ? 'block' : 'none';
 
   const stateList = document.getElementById('stateList');
   stateList.innerHTML = '';
   let bestMode = null, bestVal = -1;
   for(const m of MODES){
-    if(post[m] > bestVal){ bestVal = post[m]; bestMode = m; }
-    const pct = (post[m]*100).toFixed(1);
+    if(live.post[m] > bestVal){ bestVal = live.post[m]; bestMode = m; }
+    const pct = (live.post[m] * 100).toFixed(1);
     const row = document.createElement('div');
     row.className = 'state-row';
     row.innerHTML = `
@@ -270,19 +294,24 @@ function render(){
     `;
     stateList.appendChild(row);
   }
-  document.getElementById('bestTag').innerHTML = history.length
-    ? `<span class="best-tag">現在の推定：${MODE_LABEL[bestMode]}（${(bestVal*100).toFixed(1)}%）</span>`
-    : `<span class="best-tag">データなし（均等表示中）</span>`;
+  document.getElementById('bestTag').innerHTML =
+    `<span class="best-tag">現在の推定：${MODE_LABEL[bestMode]}（${(bestVal * 100).toFixed(1)}%）</span>`;
 
   const predList = document.getElementById('predList');
   predList.innerHTML = '';
-  predictTop3(post).forEach((p, i) => {
-    const div = document.createElement('div');
-    div.className = 'pred-item';
-    div.innerHTML = `<span><span class="rank">${i+1}位</span>${rangeLabel(p.i)}</span><span class="pct">${(p.v*100).toFixed(1)}%</span>`;
-    predList.appendChild(div);
-  });
+  const preds = predictTop3Live(live);
+  if(preds.length === 0){
+    predList.innerHTML = '<div class="empty">算出できるレンジがありません</div>';
+  } else {
+    preds.forEach((p, i) => {
+      const div = document.createElement('div');
+      div.className = 'pred-item';
+      div.innerHTML = `<span><span class="rank">${i+1}位</span>${rangeLabel(p.i)}</span><span class="pct">${(p.v * 100).toFixed(1)}%</span>`;
+      predList.appendChild(div);
+    });
+  }
 
+  const history = loadHistory();
   const histList = document.getElementById('historyList');
   document.getElementById('histCount').textContent = history.length;
   if(history.length === 0){
@@ -292,19 +321,30 @@ function render(){
   }
 }
 
-document.getElementById('btnAdd').addEventListener('click', () => {
-  const input = document.getElementById('inputG');
-  const g = parseInt(input.value, 10);
-  if(!Number.isFinite(g) || g < 1){ input.focus(); return; }
-  const history = loadHistory();
-  history.push(g);
-  saveHistory(history);
-  input.value = '';
-  input.focus();
+const inputCurrentG = document.getElementById('inputCurrentG');
+inputCurrentG.addEventListener('input', () => {
+  const g = parseInt(inputCurrentG.value, 10);
+  saveCurrentG(Number.isFinite(g) && g >= 0 ? g : 0);
   render();
 });
-document.getElementById('inputG').addEventListener('keydown', (e) => {
-  if(e.key === 'Enter') document.getElementById('btnAdd').click();
+
+document.getElementById('btnPlus').addEventListener('click', () => {
+  saveCurrentG(loadCurrentG() + 1);
+  render();
+});
+document.getElementById('btnMinus').addEventListener('click', () => {
+  saveCurrentG(Math.max(0, loadCurrentG() - 1));
+  render();
+});
+
+document.getElementById('btnRegister').addEventListener('click', () => {
+  const currentG = loadCurrentG();
+  if(currentG < 1){ inputCurrentG.focus(); return; }
+  const history = loadHistory();
+  history.push(currentG);
+  saveHistory(history);
+  saveCurrentG(0);
+  render();
 });
 
 document.getElementById('btnUndo').addEventListener('click', () => {
@@ -317,18 +357,10 @@ document.getElementById('btnUndo').addEventListener('click', () => {
 
 document.getElementById('btnClear').addEventListener('click', () => {
   if(!confirm('台移動しますか？累積データを全て消去します。')) return;
-  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(STORAGE_KEY_HISTORY);
+  localStorage.removeItem(STORAGE_KEY_CURRENT);
   render();
 });
-
-const inputCurrentG = document.getElementById('inputCurrentG');
-const shutterBadge = document.getElementById('shutterBadge');
-function checkShutter(){
-  const g = parseInt(inputCurrentG.value, 10);
-  const inZone = Number.isFinite(g) && ((g >= 37 && g <= 38) || (g >= 43 && g <= 45));
-  shutterBadge.classList.toggle('show', inZone);
-}
-inputCurrentG.addEventListener('input', checkShutter);
 
 render();
 </script>
