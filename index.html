@@ -119,6 +119,21 @@
   .empty{color:var(--sub);font-size:0.8rem;text-align:center;padding:8px 0;}
   footer{text-align:center;font-size:0.68rem;color:#6b4d49;margin-top:18px;line-height:1.6;}
   footer a{color:#8a6560;}
+
+  .toggle-row{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:0.78rem;color:var(--sub);}
+  .toggle-row input{width:16px;height:16px;flex:0 0 auto;}
+
+  .tenjou-num{display:flex;align-items:baseline;justify-content:center;gap:6px;margin-bottom:10px;}
+  .tenjou-num .val{font-size:2.2rem;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums;}
+  .tenjou-num .unit{font-size:0.9rem;color:var(--sub);}
+  .progress-bar-bg{background:#0e0506;border:1px solid var(--line);border-radius:8px;height:16px;overflow:hidden;}
+  .progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--gold));transition:width .3s ease;}
+  .tenjou-sub{font-size:0.78rem;color:var(--sub);margin-top:8px;text-align:center;}
+
+  .counter-card{text-align:center;}
+  .counter-display{font-size:2.4rem;font-weight:700;color:var(--red);margin:4px 0 12px;font-variant-numeric:tabular-nums;}
+  .counter-row{display:flex;gap:8px;}
+  .counter-row button{flex:1;}
 </style>
 </head>
 <body>
@@ -138,7 +153,7 @@
       <input type="number" id="inputCurrentG" inputmode="numeric" placeholder="0" min="0">
       <button class="btn-step" id="btnPlus">＋1</button>
     </div>
-    <div class="hint">まだ当選していない現在のゲーム数を入力・更新すると、②③がリアルタイムで再計算されます。</div>
+    <div class="hint">まだ当選していない現在のゲーム数を入力・更新すると、②③④がリアルタイムで再計算されます。</div>
     <div class="shutter-badge" id="shutterBadge">
       ⚡ シャッターチャンス区間です！ ここでシャッター演出が出現した場合、モードC＆高確率が濃厚です。
     </div>
@@ -147,27 +162,51 @@
     </div>
     <div class="hint">当選したらこのボタンで履歴に記録し、現在のゲーム数を0に戻します。</div>
     <div class="warn" id="outOfRangeWarn" style="display:none;">
-      ⚠ 想定データ範囲（〜1536G）を超えています。参考値は均等表示になります。
+      ⚠ 想定データ範囲を超えています。参考値は均等表示になります。
     </div>
+    <label class="toggle-row">
+      <input type="checkbox" id="chkSettingChange">
+      本日の1G目から打っている（設定変更の可能性あり・天井短縮）
+    </label>
   </div>
 
   <div class="card">
-    <h2>② 現在の推定状態</h2>
+    <h2>② 天井までの残りゲーム数</h2>
+    <div class="tenjou-num">
+      <span class="val" id="tenjouRemain">-</span><span class="unit">G</span>
+    </div>
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="tenjouBar" style="width:0%"></div></div>
+    <div class="tenjou-sub" id="tenjouSub"></div>
+  </div>
+
+  <div class="card">
+    <h2>③ 現在の推定状態</h2>
     <div class="state-list" id="stateList"></div>
     <div id="bestTag"></div>
     <div class="hint">「その回数まで当選していない」という事実から、まだ生き残っている可能性が高いモードを都度計算しています（当選履歴の積み上げではありません）。</div>
   </div>
 
   <div class="card">
-    <h2>③ 次あべし当選ゲーム数（有力レンジ TOP3）</h2>
+    <h2>④ 次あべし当選ゲーム数（有力レンジ TOP3）</h2>
     <div class="pred-list" id="predList"></div>
-    <div class="hint">現在のゲーム数より後のレンジのみを対象に、②の推定状態を踏まえて算出しています。</div>
+    <div class="hint">現在のゲーム数より後のレンジのみを対象に、③の推定状態を踏まえて算出しています。</div>
   </div>
 
   <details class="card" style="margin-bottom:14px;">
     <summary>モードCの法則について</summary>
     <p>モードCは <b>37〜38ゲーム目</b> または <b>43〜45ゲーム目</b> でシャッター演出が発生することがあり、これが出現した場合は高確率状態が示唆されます。①のゲーム数欄がこの区間に入ると自動でバッジが表示されます。</p>
   </details>
+
+  <div class="card counter-card">
+    <h2 style="justify-content:center;">⑤ 単発ボーナス連続カウント</h2>
+    <div class="counter-display" id="tanpatsuCount">0</div>
+    <div class="counter-row">
+      <button class="btn-sub" id="btnTanpatsuMinus">−1</button>
+      <button class="btn-gold" id="btnTanpatsuPlus" style="flex:2;">単発を引いた +1</button>
+      <button class="btn-sub" id="btnTanpatsuReset">0に</button>
+    </div>
+    <div class="hint">あべし成立を記録すると自動で0に戻ります。単純なタリーカウンターです（確率計算には使用していません）。</div>
+  </div>
 
   <div class="card">
     <h2>履歴（<span id="histCount">0</span>件）</h2>
@@ -185,19 +224,37 @@
 </div>
 
 <script>
-// 規定あべし振り分け（設定変更時以外・設定1） 64G刻み 24バケット（1〜1536G）
+// 規定あべし振り分け（設定変更時以外・設定1） 64G刻み 24バケット（1〜1536G、天井1536G）
+// 規定あべし振り分け（設定変更時・設定1） 64G刻み 20バケット（1〜1280G、天井1280G＝短縮）
 // 各値は% （"ー"は0として扱う）
-const DATA = {
+const DATA_NORMAL = {
   A: [0.20,1.37,0.31,21.94,0.12,0.73,0.12,0.12,5.60,0.11,0.12,1.40,0.11,5.71,0.11,0.71,0.12,0.73,0.12,10.99,3.40,15.11,29.30,1.45],
   B: [0.21,1.49,0.37,26.59,0.73,4.41,0.02,0.02,0.98,0.99,1.01,12.23,1.00,49.93,0,0,0,0,0,0,0,0,0,0],
   C: [0.03,0.20,0.40,28.81,0.45,2.70,1.41,1.38,64.64,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
   T: [12.50,87.50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 };
+const DATA_SETCHANGE = {
+  A: [0.26,1.80,0.36,26.26,0.15,0.88,0.15,0.15,6.71,0.10,0.10,1.19,0.10,4.85,0.89,5.34,0.89,5.34,0.89,43.62],
+  B: [0.29,2.02,0.45,32.72,0.90,5.41,0.03,0.03,1.21,0.89,0.89,10.68,0.89,43.60,0,0,0,0,0,0],
+  C: [0.03,0.22,0.40,28.77,0.45,2.69,1.40,1.40,64.63,0,0,0,0,0,0,0,0,0,0,0],
+  T: [12.50,87.50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+};
 const MODES = ['A','B','C','T'];
 const MODE_LABEL = {A:'通常A', B:'通常B', C:'通常C', T:'天国'};
-const BUCKET_COUNT = 24;
 const STORAGE_KEY_HISTORY = 'hokuto_tensei2_abeshi_history_v1';
 const STORAGE_KEY_CURRENT = 'hokuto_tensei2_current_g_v1';
+const STORAGE_KEY_SETCHANGE = 'hokuto_tensei2_setchange_v1';
+const STORAGE_KEY_TANPATSU = 'hokuto_tensei2_tanpatsu_v1';
+
+function activeData(){
+  const useSetChange = loadSetChange();
+  return {
+    data: useSetChange ? DATA_SETCHANGE : DATA_NORMAL,
+    bucketCount: useSetChange ? 20 : 24,
+    tenjouG: useSetChange ? 1280 : 1536,
+    useSetChange
+  };
+}
 
 function rangeLabel(idx){
   return `${idx*64+1}〜${idx*64+64}G`;
@@ -220,19 +277,33 @@ function loadCurrentG(){
 function saveCurrentG(g){
   localStorage.setItem(STORAGE_KEY_CURRENT, String(g));
 }
+function loadSetChange(){
+  return localStorage.getItem(STORAGE_KEY_SETCHANGE) === '1';
+}
+function saveSetChange(on){
+  localStorage.setItem(STORAGE_KEY_SETCHANGE, on ? '1' : '0');
+}
+function loadTanpatsu(){
+  const g = parseInt(localStorage.getItem(STORAGE_KEY_TANPATSU), 10);
+  return Number.isFinite(g) && g >= 0 ? g : 0;
+}
+function saveTanpatsu(g){
+  localStorage.setItem(STORAGE_KEY_TANPATSU, String(Math.max(0, g)));
+}
 
 // 現在のゲーム数までまだ当選していない、という条件付き確率（生存確率）でモードを推定する。
 // 過去の当選履歴は「モードが再抽選された別セッションの結果」なので、今回の推定には使わない。
-function computeLive(currentG){
-  const idx = Math.min(Math.max(Math.floor(currentG / 64), 0), BUCKET_COUNT - 1);
+function computeLive(currentG, ctx){
+  const {data, bucketCount} = ctx;
+  const idx = Math.min(Math.max(Math.floor(currentG / 64), 0), bucketCount - 1);
   const bucketTop = (idx + 1) * 64;
   const remainFrac = Math.min(Math.max((bucketTop - currentG) / 64, 0), 1);
   const prior = {A:0.25,B:0.25,C:0.25,T:0.25};
   const survival = {};
   for(const m of MODES){
-    let s = remainFrac * (DATA[m][idx] / 100);
-    for(let i = idx + 1; i < BUCKET_COUNT; i++){
-      s += DATA[m][i] / 100;
+    let s = remainFrac * (data[m][idx] / 100);
+    for(let i = idx + 1; i < bucketCount; i++){
+      s += data[m][i] / 100;
     }
     survival[m] = s;
   }
@@ -249,13 +320,14 @@ function computeLive(currentG){
   return {idx, remainFrac, survival, post, outOfRange};
 }
 
-function predictTop3Live(live){
+function predictTop3Live(live, ctx){
+  const {data, bucketCount} = ctx;
   const {idx, remainFrac, survival, post} = live;
-  const mix = new Array(BUCKET_COUNT).fill(0);
+  const mix = new Array(bucketCount).fill(0);
   for(const m of MODES){
     if(survival[m] <= 0) continue;
-    for(let i = idx; i < BUCKET_COUNT; i++){
-      const raw = (i === idx) ? remainFrac * (DATA[m][i] / 100) : (DATA[m][i] / 100);
+    for(let i = idx; i < bucketCount; i++){
+      const raw = (i === idx) ? remainFrac * (data[m][i] / 100) : (data[m][i] / 100);
       mix[i] += post[m] * (raw / survival[m]);
     }
   }
@@ -272,12 +344,29 @@ function render(){
   if(document.activeElement !== inputCurrentG){
     inputCurrentG.value = currentG || '';
   }
+  const chkSettingChange = document.getElementById('chkSettingChange');
+  if(document.activeElement !== chkSettingChange){
+    chkSettingChange.checked = loadSetChange();
+  }
 
   const inZone = (currentG >= 37 && currentG <= 38) || (currentG >= 43 && currentG <= 45);
   document.getElementById('shutterBadge').classList.toggle('show', inZone);
 
-  const live = computeLive(currentG);
+  const ctx = activeData();
+  const live = computeLive(currentG, ctx);
   document.getElementById('outOfRangeWarn').style.display = live.outOfRange ? 'block' : 'none';
+
+  const remain = Math.max(0, ctx.tenjouG - currentG);
+  document.getElementById('tenjouRemain').textContent = remain;
+  const progressPct = Math.min(100, (currentG / ctx.tenjouG) * 100);
+  document.getElementById('tenjouBar').style.width = progressPct + '%';
+  const tenjouSubParts = [`天井: ${ctx.tenjouG}G（${ctx.useSetChange ? '設定変更後の短縮天井' : '通常'}）`];
+  if(!ctx.useSetChange && currentG > 1473){
+    tenjouSubParts.push('1473G超えでの当選 → ATレベル3以上濃厚');
+  }
+  document.getElementById('tenjouSub').innerHTML = tenjouSubParts.join('<br>');
+
+  document.getElementById('tanpatsuCount').textContent = loadTanpatsu();
 
   const stateList = document.getElementById('stateList');
   stateList.innerHTML = '';
@@ -299,7 +388,7 @@ function render(){
 
   const predList = document.getElementById('predList');
   predList.innerHTML = '';
-  const preds = predictTop3Live(live);
+  const preds = predictTop3Live(live, ctx);
   if(preds.length === 0){
     predList.innerHTML = '<div class="empty">算出できるレンジがありません</div>';
   } else {
@@ -337,6 +426,11 @@ document.getElementById('btnMinus').addEventListener('click', () => {
   render();
 });
 
+document.getElementById('chkSettingChange').addEventListener('change', (e) => {
+  saveSetChange(e.target.checked);
+  render();
+});
+
 document.getElementById('btnRegister').addEventListener('click', () => {
   const currentG = loadCurrentG();
   if(currentG < 1){ inputCurrentG.focus(); return; }
@@ -344,6 +438,20 @@ document.getElementById('btnRegister').addEventListener('click', () => {
   history.push(currentG);
   saveHistory(history);
   saveCurrentG(0);
+  saveTanpatsu(0);
+  render();
+});
+
+document.getElementById('btnTanpatsuPlus').addEventListener('click', () => {
+  saveTanpatsu(loadTanpatsu() + 1);
+  render();
+});
+document.getElementById('btnTanpatsuMinus').addEventListener('click', () => {
+  saveTanpatsu(loadTanpatsu() - 1);
+  render();
+});
+document.getElementById('btnTanpatsuReset').addEventListener('click', () => {
+  saveTanpatsu(0);
   render();
 });
 
@@ -359,6 +467,8 @@ document.getElementById('btnClear').addEventListener('click', () => {
   if(!confirm('台移動しますか？累積データを全て消去します。')) return;
   localStorage.removeItem(STORAGE_KEY_HISTORY);
   localStorage.removeItem(STORAGE_KEY_CURRENT);
+  localStorage.removeItem(STORAGE_KEY_SETCHANGE);
+  localStorage.removeItem(STORAGE_KEY_TANPATSU);
   render();
 });
 
