@@ -74,7 +74,7 @@
 
   .state-list{display:flex;flex-direction:column;gap:8px;}
   .state-row{display:flex;align-items:center;gap:10px;}
-  .state-label{width:64px;flex-shrink:0;font-size:0.85rem;font-weight:700;}
+  .state-label{width:72px;flex-shrink:0;font-size:0.85rem;font-weight:700;line-height:1.3;}
   .state-bar-bg{flex:1;background:#0e0506;border-radius:8px;height:20px;overflow:hidden;position:relative;border:1px solid var(--line);}
   .state-bar-fill{height:100%;border-radius:8px 0 0 8px;transition:width .3s ease;}
   .state-pct{width:52px;text-align:right;font-size:0.85rem;font-variant-numeric:tabular-nums;}
@@ -96,15 +96,6 @@
   }
   .pred-item .rank{color:var(--gold);font-weight:700;margin-right:8px;}
   .pred-item .pct{color:var(--sub);font-variant-numeric:tabular-nums;}
-
-  .shutter-badge{
-    display:none;margin-top:10px;padding:10px 12px;border-radius:10px;
-    background:linear-gradient(90deg,rgba(224,49,42,0.25),rgba(224,168,60,0.2));
-    border:1px solid var(--gold);color:var(--gold);font-size:0.85rem;
-    animation:pulse 1.4s infinite;
-  }
-  .shutter-badge.show{display:block;}
-  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.55;}}
 
   details{background:#0e0506;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-top:10px;}
   summary{cursor:pointer;color:var(--sub);font-size:0.82rem;}
@@ -141,8 +132,8 @@
   <header>
     <h1>北斗の拳 転生の章2　攻略ツール</h1>
     <div class="note">
-      規定あべし振り分け（設定変更時以外・設定1）を基にした簡易状態推定ツール。<br>
-      ※「天性の章2」は正式名称「転生の章2」の可能性があります。データ取得元: p-town.dmm.com
+      規定あべし振り分け表＋実測モード移行率（設定1）を組み合わせた状態推定ツール。<br>
+      ※「天性の章2」は正式名称「転生の章2」の可能性があります。
     </div>
   </header>
 
@@ -154,9 +145,6 @@
       <button class="btn-step" id="btnPlus">＋1</button>
     </div>
     <div class="hint">まだ当選していない現在のゲーム数を入力・更新すると、②③④がリアルタイムで再計算されます。</div>
-    <div class="shutter-badge" id="shutterBadge">
-      ⚡ シャッターチャンス区間です！ ここでシャッター演出が出現した場合、モードC＆高確率が濃厚です。
-    </div>
     <div class="row" style="margin-top:10px;">
       <button class="btn-gold" id="btnRegister" style="flex:1;">🎯 あべし成立！記録してリセット</button>
     </div>
@@ -183,7 +171,7 @@
     <h2>③ 現在の推定状態</h2>
     <div class="state-list" id="stateList"></div>
     <div id="bestTag"></div>
-    <div class="hint">「その回数まで当選していない」という事実から、まだ生き残っている可能性が高いモードを都度計算しています（当選履歴の積み上げではありません）。</div>
+    <div class="hint">実測のモード移行率を初期確率とし、「その回数まで当選していない」という事実を反映して都度再計算しています（過去の当選履歴そのものの積み上げではありません）。</div>
   </div>
 
   <div class="card">
@@ -192,13 +180,28 @@
     <div class="hint">現在のゲーム数より後のレンジのみを対象に、③の推定状態を踏まえて算出しています。</div>
   </div>
 
+  <div class="card">
+    <h2>⑤ ゾーン外プレ前兆チェック</h2>
+    <div class="hint">37〜48G・166〜173G・288〜300G・421〜429G・489〜495Gの5区間で、レア役を引いていないのに前兆演出が出た場合は「896G以内当選濃厚（モードB以上）」の目安になります。①のゲーム数がこの区間に入ると下に確認ボタンが表示されます。</div>
+    <div id="zonePanel"></div>
+    <div class="best-tag" id="omenAdvice" style="display:none;margin-top:10px;"></div>
+  </div>
+
   <details class="card" style="margin-bottom:14px;">
-    <summary>モードCの法則について</summary>
-    <p>モードCは <b>37〜38ゲーム目</b> または <b>43〜45ゲーム目</b> でシャッター演出が発生することがあり、これが出現した場合は高確率状態が示唆されます。①のゲーム数欄がこの区間に入ると自動でバッジが表示されます。</p>
+    <summary>各モードの規定あべし上限・データ出典について</summary>
+    <p>通常A＝〜1536G／通常B＝〜896G／通常C＝〜576G／天国＝〜128Gが規定あべしの上限です（この範囲を超えて未当選なら、そのモードである可能性はほぼ消えます）。</p>
+    <p>②③の推定には、あべし成立時の「次モード移行率」（設定1・通常時：A51.9% B23.7% C17.6% 天国6.8% ／ 設定変更時：A49.3% B22.0% C20.1% 天国8.6%）を新しい区間の初期確率として使用しています。ゾーン外プレ前兆の判定は攻略サイトの経験則に基づく目安で、②③の数値計算には含めていません。</p>
+    <p style="color:var(--sub);">当初ご指定の「37〜38G・43〜45GでモードC示唆」は、調査の結果おそらくこの37〜48G区間（モードA以外全般を示唆）の簡略版と考えられます。</p>
+  </details>
+
+  <details class="card" style="margin-bottom:14px;">
+    <summary>設定差・ATレベルについて（参考情報）</summary>
+    <p><b>設定示唆</b>：筐体中央ランプ金点灯／両サイドランプ紫点灯・点滅／サミートロフィー虹色→いずれも設定6濃厚〜確定。AT初当たり確率の目安は設定1=1/366.0、設定6=1/273.1。</p>
+    <p><b>ATレベル</b>：AT当選時にLv1〜4が決定し、AT終了まで固定。レベルが高いほど、各セット開始時の闘神レベル（A〜D、Dが最上位）が優遇されます。オーラ色は白→青→黄→緑→赤→紫→虹の順で期待度が上がります。</p>
   </details>
 
   <div class="card counter-card">
-    <h2 style="justify-content:center;">⑤ 単発ボーナス連続カウント</h2>
+    <h2 style="justify-content:center;">⑥ 単発ボーナス連続カウント</h2>
     <div class="counter-display" id="tanpatsuCount">0</div>
     <div class="counter-row">
       <button class="btn-sub" id="btnTanpatsuMinus">−1</button>
@@ -219,7 +222,9 @@
 
   <footer>
     参考値です。実機の挙動を保証するものではありません。台移動・電源再投入時は必ずクリアしてください。<br>
-    データ出典: <a href="https://p-town.dmm.com/machines/4909" target="_blank" rel="noopener">p-town.dmm.com</a>（設定1 / 設定変更時以外）
+    データ出典: <a href="https://p-town.dmm.com/machines/4909" target="_blank" rel="noopener">p-town.dmm.com</a>（規定あべし振り分け・設定1）、
+    <a href="https://nana-press.com/kaiseki/machine/1059/33039/" target="_blank" rel="noopener">nana-press.com</a>（モード移行率・設定差）、
+    <a href="https://note.com/norihey_01/n/ne90cfaa4f7d9" target="_blank" rel="noopener">note.com/norihey_01</a>（ゾーン外プレ前兆）
   </footer>
 </div>
 
@@ -241,10 +246,23 @@ const DATA_SETCHANGE = {
 };
 const MODES = ['A','B','C','T'];
 const MODE_LABEL = {A:'通常A', B:'通常B', C:'通常C', T:'天国'};
+const MODE_CEILING = {A:1536, B:896, C:576, T:128};
+// あべし成立時（＝新セッション開始時）の次モード移行率。25%均等リセットではなく実測値を初期確率として使う。
+const PRIOR_NORMAL = {A:0.519, B:0.237, C:0.176, T:0.068};
+const PRIOR_SETCHANGE = {A:0.493, B:0.220, C:0.201, T:0.086};
+// ゾーン外プレ前兆区間（あべし数）。区間内で前兆演出が出現→896あべし以内当選濃厚（モードB以上）の目安。
+const ZONES = [
+  {min:37, max:48},
+  {min:166, max:173},
+  {min:288, max:300},
+  {min:421, max:429},
+  {min:489, max:495}
+];
 const STORAGE_KEY_HISTORY = 'hokuto_tensei2_abeshi_history_v1';
 const STORAGE_KEY_CURRENT = 'hokuto_tensei2_current_g_v1';
 const STORAGE_KEY_SETCHANGE = 'hokuto_tensei2_setchange_v1';
 const STORAGE_KEY_TANPATSU = 'hokuto_tensei2_tanpatsu_v1';
+const STORAGE_KEY_OMEN = 'hokuto_tensei2_omen_v1';
 
 function activeData(){
   const useSetChange = loadSetChange();
@@ -252,8 +270,15 @@ function activeData(){
     data: useSetChange ? DATA_SETCHANGE : DATA_NORMAL,
     bucketCount: useSetChange ? 20 : 24,
     tenjouG: useSetChange ? 1280 : 1536,
+    prior: useSetChange ? PRIOR_SETCHANGE : PRIOR_NORMAL,
     useSetChange
   };
+}
+function zoneAt(g){
+  for(let i=0;i<ZONES.length;i++){
+    if(g >= ZONES[i].min && g <= ZONES[i].max) return i;
+  }
+  return -1;
 }
 
 function rangeLabel(idx){
@@ -290,15 +315,24 @@ function loadTanpatsu(){
 function saveTanpatsu(g){
   localStorage.setItem(STORAGE_KEY_TANPATSU, String(Math.max(0, g)));
 }
+function loadOmen(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY_OMEN);
+    return raw ? JSON.parse(raw) : null; // {zone, result:'B+'|'A'}
+  }catch(e){ return null; }
+}
+function saveOmen(v){
+  if(v === null){ localStorage.removeItem(STORAGE_KEY_OMEN); }
+  else { localStorage.setItem(STORAGE_KEY_OMEN, JSON.stringify(v)); }
+}
 
 // 現在のゲーム数までまだ当選していない、という条件付き確率（生存確率）でモードを推定する。
 // 過去の当選履歴は「モードが再抽選された別セッションの結果」なので、今回の推定には使わない。
 function computeLive(currentG, ctx){
-  const {data, bucketCount} = ctx;
+  const {data, bucketCount, prior} = ctx;
   const idx = Math.min(Math.max(Math.floor(currentG / 64), 0), bucketCount - 1);
   const bucketTop = (idx + 1) * 64;
   const remainFrac = Math.min(Math.max((bucketTop - currentG) / 64, 0), 1);
-  const prior = {A:0.25,B:0.25,C:0.25,T:0.25};
   const survival = {};
   for(const m of MODES){
     let s = remainFrac * (data[m][idx] / 100);
@@ -313,7 +347,7 @@ function computeLive(currentG, ctx){
   let outOfRange = false;
   if(sum <= 0){
     outOfRange = true;
-    for(const m of MODES) post[m] = 0.25;
+    for(const m of MODES) post[m] = prior[m];
   } else {
     for(const m of MODES) post[m] = post[m] / sum;
   }
@@ -349,9 +383,6 @@ function render(){
     chkSettingChange.checked = loadSetChange();
   }
 
-  const inZone = (currentG >= 37 && currentG <= 38) || (currentG >= 43 && currentG <= 45);
-  document.getElementById('shutterBadge').classList.toggle('show', inZone);
-
   const ctx = activeData();
   const live = computeLive(currentG, ctx);
   document.getElementById('outOfRangeWarn').style.display = live.outOfRange ? 'block' : 'none';
@@ -368,6 +399,36 @@ function render(){
 
   document.getElementById('tanpatsuCount').textContent = loadTanpatsu();
 
+  const curZoneIdx = zoneAt(currentG);
+  const zonePanel = document.getElementById('zonePanel');
+  zonePanel.innerHTML = ZONES.map((z, i) => {
+    const active = i === curZoneIdx;
+    return `<div class="pred-item" style="${active ? 'border-color:var(--gold);' : ''}">
+      <span>${active ? '⚡ ' : ''}第${i+1}区間 ${z.min}〜${z.max}G</span>
+      ${active ? `<span><button class="btn-sub" id="omenYes${i}" style="padding:6px 10px;font-size:0.78rem;">前兆あり</button> <button class="btn-sub" id="omenNo${i}" style="padding:6px 10px;font-size:0.78rem;">なし(通過)</button></span>` : '<span class="pct"></span>'}
+    </div>`;
+  }).join('');
+  if(curZoneIdx >= 0){
+    document.getElementById(`omenYes${curZoneIdx}`).addEventListener('click', () => {
+      saveOmen({zone: curZoneIdx, result: 'B+'});
+      render();
+    });
+    document.getElementById(`omenNo${curZoneIdx}`).addEventListener('click', () => {
+      saveOmen({zone: curZoneIdx, result: 'A'});
+      render();
+    });
+  }
+  const omen = loadOmen();
+  const omenAdvice = document.getElementById('omenAdvice');
+  if(omen){
+    omenAdvice.style.display = 'block';
+    omenAdvice.textContent = omen.result === 'B+'
+      ? `🔥 第${omen.zone+1}区間で前兆あり → 896G以内当選濃厚（モードB以上目安）`
+      : `第${omen.zone+1}区間は前兆なし → モードA濃厚の目安（攻略サイト情報では期待値104〜105%程度でのヤメも選択肢）`;
+  } else {
+    omenAdvice.style.display = 'none';
+  }
+
   const stateList = document.getElementById('stateList');
   stateList.innerHTML = '';
   let bestMode = null, bestVal = -1;
@@ -377,7 +438,7 @@ function render(){
     const row = document.createElement('div');
     row.className = 'state-row';
     row.innerHTML = `
-      <div class="state-label">${MODE_LABEL[m]}</div>
+      <div class="state-label">${MODE_LABEL[m]}<br><span style="font-size:0.65rem;color:var(--sub);font-weight:400;">〜${MODE_CEILING[m]}G</span></div>
       <div class="state-bar-bg"><div class="state-bar-fill fill-${m}" style="width:${pct}%"></div></div>
       <div class="state-pct">${pct}%</div>
     `;
@@ -439,6 +500,7 @@ document.getElementById('btnRegister').addEventListener('click', () => {
   saveHistory(history);
   saveCurrentG(0);
   saveTanpatsu(0);
+  saveOmen(null);
   render();
 });
 
@@ -469,6 +531,7 @@ document.getElementById('btnClear').addEventListener('click', () => {
   localStorage.removeItem(STORAGE_KEY_CURRENT);
   localStorage.removeItem(STORAGE_KEY_SETCHANGE);
   localStorage.removeItem(STORAGE_KEY_TANPATSU);
+  localStorage.removeItem(STORAGE_KEY_OMEN);
   render();
 });
 
