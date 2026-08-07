@@ -102,10 +102,24 @@
   details p{font-size:0.78rem;line-height:1.7;color:var(--text);margin:8px 0 0;}
   details ul{font-size:0.78rem;line-height:1.7;color:var(--text);margin:8px 0 0;padding-left:1.1em;}
 
-  .history{display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;}
-  .history span{
-    background:#0e0506;border:1px solid var(--line);border-radius:6px;
-    padding:4px 8px;font-size:0.78rem;color:var(--sub);
+  .hist-stats{
+    display:flex;justify-content:space-between;gap:8px;
+    background:#0e0506;border:1px solid var(--line);border-radius:8px;
+    padding:8px 12px;margin-bottom:10px;font-size:0.75rem;color:var(--sub);
+  }
+  .hist-stats b{color:var(--gold);font-size:0.9rem;display:block;}
+  .hist-log{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;}
+  .hist-row{
+    display:flex;align-items:center;gap:10px;
+    background:#0e0506;border:1px solid var(--line);border-radius:8px;
+    padding:8px 10px;font-size:0.85rem;
+  }
+  .hist-row .hist-idx{color:var(--sub);font-size:0.75rem;width:32px;flex-shrink:0;}
+  .hist-row .hist-g{font-weight:700;color:var(--text);flex:1;}
+  .hist-row .hist-ts{color:var(--sub);font-size:0.72rem;flex-shrink:0;}
+  .hist-row .hist-del{
+    background:transparent;border:1px solid var(--line);color:var(--red);
+    border-radius:6px;width:28px;height:28px;padding:0;font-size:0.9rem;flex-shrink:0;
   }
   .empty{color:var(--sub);font-size:0.8rem;text-align:center;padding:8px 0;}
   footer{text-align:center;font-size:0.68rem;color:#6b4d49;margin-top:18px;line-height:1.6;}
@@ -212,11 +226,9 @@
   </div>
 
   <div class="card">
-    <h2>履歴（<span id="histCount">0</span>件）</h2>
-    <div class="history" id="historyList"><div class="empty">まだデータがありません</div></div>
-    <div class="row" style="margin-top:8px;">
-      <button class="btn-undo" id="btnUndo" style="flex:1;">直前の記録を取り消す</button>
-    </div>
+    <h2>あべし数の履歴（<span id="histCount">0</span>件）</h2>
+    <div class="hist-stats" id="histStats"></div>
+    <div class="hist-log" id="historyList"><div class="empty">まだデータがありません</div></div>
     <button class="btn-danger" id="btnClear">🔄 台移動・データを全クリア</button>
   </div>
 
@@ -288,11 +300,19 @@ function rangeLabel(idx){
 function loadHistory(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY_HISTORY);
-    return raw ? JSON.parse(raw) : [];
+    const arr = raw ? JSON.parse(raw) : [];
+    // 旧形式（数値のみの配列）との互換性維持
+    return arr.map(e => typeof e === 'number' ? {g: e, ts: null} : e);
   }catch(e){ return []; }
 }
 function saveHistory(h){
   localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(h));
+}
+function formatTs(ts){
+  if(!ts) return '';
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 function loadCurrentG(){
   const raw = localStorage.getItem(STORAGE_KEY_CURRENT);
@@ -463,11 +483,28 @@ function render(){
 
   const history = loadHistory();
   const histList = document.getElementById('historyList');
+  const histStats = document.getElementById('histStats');
   document.getElementById('histCount').textContent = history.length;
   if(history.length === 0){
     histList.innerHTML = '<div class="empty">まだデータがありません</div>';
+    histStats.innerHTML = '';
   } else {
-    histList.innerHTML = history.map(g => `<span>${g}G</span>`).join('');
+    const values = history.map(e => e.g);
+    const avg = values.reduce((a, b) => a + b, 0) / values.length;
+    histStats.innerHTML = `
+      <div>平均<b>${avg.toFixed(0)}G</b></div>
+      <div>最短<b>${Math.min(...values)}G</b></div>
+      <div>最長<b>${Math.max(...values)}G</b></div>
+    `;
+    histList.innerHTML = history.slice().reverse().map((e, i) => {
+      const idx = history.length - 1 - i;
+      return `<div class="hist-row">
+        <span class="hist-idx">#${idx + 1}</span>
+        <span class="hist-g">${e.g}G</span>
+        <span class="hist-ts">${formatTs(e.ts)}</span>
+        <button class="hist-del" data-idx="${idx}">×</button>
+      </div>`;
+    }).join('');
   }
 }
 
@@ -496,7 +533,7 @@ document.getElementById('btnRegister').addEventListener('click', () => {
   const currentG = loadCurrentG();
   if(currentG < 1){ inputCurrentG.focus(); return; }
   const history = loadHistory();
-  history.push(currentG);
+  history.push({g: currentG, ts: Date.now()});
   saveHistory(history);
   saveCurrentG(0);
   saveTanpatsu(0);
@@ -517,10 +554,12 @@ document.getElementById('btnTanpatsuReset').addEventListener('click', () => {
   render();
 });
 
-document.getElementById('btnUndo').addEventListener('click', () => {
+document.getElementById('historyList').addEventListener('click', (e) => {
+  const btn = e.target.closest('.hist-del');
+  if(!btn) return;
+  const idx = parseInt(btn.dataset.idx, 10);
   const history = loadHistory();
-  if(history.length === 0) return;
-  history.pop();
+  history.splice(idx, 1);
   saveHistory(history);
   render();
 });
