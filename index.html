@@ -122,6 +122,16 @@
     border-radius:6px;width:28px;height:28px;padding:0;font-size:0.9rem;flex-shrink:0;
   }
   .empty{color:var(--sub);font-size:0.8rem;text-align:center;padding:8px 0;}
+
+  .chart-card{position:relative;margin-bottom:10px;}
+  .chart-card svg{width:100%;height:auto;aspect-ratio:320/160;display:block;touch-action:none;cursor:crosshair;}
+  .chart-tooltip{
+    position:absolute;pointer-events:none;display:none;
+    background:#0e0506;border:1px solid var(--gold);border-radius:8px;
+    padding:6px 10px;font-size:0.72rem;color:var(--sub);line-height:1.5;
+    transform:translate(-50%,-115%);white-space:nowrap;z-index:2;
+  }
+  .chart-tooltip b{color:var(--gold);font-size:0.95rem;}
   footer{text-align:center;font-size:0.68rem;color:#6b4d49;margin-top:18px;line-height:1.6;}
   footer a{color:#8a6560;}
 
@@ -228,6 +238,11 @@
   <div class="card">
     <h2>あべし数の履歴（<span id="histCount">0</span>件）</h2>
     <div class="hist-stats" id="histStats"></div>
+    <div class="chart-card" id="chartCard" style="display:none;">
+      <svg id="histChart" viewBox="0 0 320 160"></svg>
+      <div class="chart-tooltip" id="chartTooltip"></div>
+    </div>
+    <div class="empty" id="chartEmptyHint" style="display:none;">データが2件以上たまるとグラフが表示されます</div>
     <div class="hist-log" id="historyList"><div class="empty">まだデータがありません</div></div>
     <button class="btn-danger" id="btnClear">🔄 台移動・データを全クリア</button>
   </div>
@@ -506,6 +521,92 @@ function render(){
       </div>`;
     }).join('');
   }
+  renderChart(history);
+}
+
+function renderChart(history){
+  const chartCard = document.getElementById('chartCard');
+  const chartEmptyHint = document.getElementById('chartEmptyHint');
+  if(history.length < 2){
+    chartCard.style.display = 'none';
+    chartEmptyHint.style.display = history.length === 1 ? 'block' : 'none';
+    return;
+  }
+  chartCard.style.display = 'block';
+  chartEmptyHint.style.display = 'none';
+
+  const W = 320, H = 160, padL = 32, padR = 10, padT = 12, padB = 20;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const n = history.length;
+  const values = history.map(e => e.g);
+  const rawMax = Math.max(...values);
+  const yMax = Math.max(64, Math.ceil(rawMax * 1.15 / 50) * 50);
+  const xAt = i => padL + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
+  const yAt = v => padT + (1 - Math.min(v, yMax) / yMax) * plotH;
+
+  const parts = [];
+  [0, yMax / 2, yMax].forEach(gy => {
+    const y = yAt(gy);
+    parts.push(`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="#3a1e1f" stroke-width="1"/>`);
+    parts.push(`<text x="${padL - 5}" y="${(y + 3).toFixed(1)}" text-anchor="end" font-size="8" fill="#b58e88">${Math.round(gy)}</text>`);
+  });
+
+  const pathD = history.map((e, i) => `${i === 0 ? 'M' : 'L'}${xAt(i).toFixed(1)},${yAt(e.g).toFixed(1)}`).join(' ');
+  parts.push(`<path d="${pathD}" fill="none" stroke="#e0a83c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`);
+
+  history.forEach((e, i) => {
+    const isLast = i === n - 1;
+    const r = isLast ? 5 : 3;
+    parts.push(`<circle cx="${xAt(i).toFixed(1)}" cy="${yAt(e.g).toFixed(1)}" r="${r}" fill="#e0a83c" ${isLast ? 'stroke="#1c0d10" stroke-width="2"' : ''}/>`);
+  });
+
+  const lastX = xAt(n - 1), lastY = yAt(values[n - 1]);
+  const lastAnchor = lastX > W - 40 ? 'end' : 'start';
+  parts.push(`<text x="${(lastAnchor === 'end' ? lastX - 8 : lastX + 8).toFixed(1)}" y="${(lastY - 8).toFixed(1)}" font-size="9" fill="#f2e6e2" font-weight="700" text-anchor="${lastAnchor}">${values[n - 1]}G</text>`);
+
+  parts.push(`<text x="${xAt(0).toFixed(1)}" y="${H - 5}" font-size="8" fill="#b58e88" text-anchor="start">#1</text>`);
+  parts.push(`<text x="${xAt(n - 1).toFixed(1)}" y="${H - 5}" font-size="8" fill="#b58e88" text-anchor="end">#${n}</text>`);
+
+  parts.push(`<rect id="chartHitzone" x="${padL}" y="0" width="${plotW}" height="${H}" fill="transparent"/>`);
+  parts.push(`<line id="chartCrosshair" x1="0" y1="${padT}" x2="0" y2="${H - padB}" stroke="#b58e88" stroke-width="1" style="display:none;"/>`);
+
+  const svg = document.getElementById('histChart');
+  svg.innerHTML = parts.join('');
+
+  const tooltip = document.getElementById('chartTooltip');
+  const crosshair = document.getElementById('chartCrosshair');
+  const hitzone = document.getElementById('chartHitzone');
+
+  function showAt(i){
+    const e = history[i];
+    const x = xAt(i), y = yAt(e.g);
+    crosshair.setAttribute('x1', x); crosshair.setAttribute('x2', x);
+    crosshair.style.display = 'block';
+    const rect = svg.getBoundingClientRect();
+    const scale = rect.width / W;
+    tooltip.style.left = (x * scale) + 'px';
+    tooltip.style.top = (y * scale) + 'px';
+    tooltip.innerHTML = `<b>${e.g}G</b><br>#${i + 1} ${formatTs(e.ts)}`;
+    tooltip.style.display = 'block';
+  }
+  function hide(){
+    crosshair.style.display = 'none';
+    tooltip.style.display = 'none';
+  }
+  function nearestIndex(clientX){
+    const rect = svg.getBoundingClientRect();
+    const scale = rect.width / W;
+    const userX = (clientX - rect.left) / scale;
+    let best = 0, bestDist = Infinity;
+    for(let i = 0; i < n; i++){
+      const d = Math.abs(xAt(i) - userX);
+      if(d < bestDist){ bestDist = d; best = i; }
+    }
+    return best;
+  }
+  hitzone.addEventListener('pointermove', (ev) => showAt(nearestIndex(ev.clientX)));
+  hitzone.addEventListener('pointerdown', (ev) => showAt(nearestIndex(ev.clientX)));
+  svg.addEventListener('pointerleave', hide);
 }
 
 const inputCurrentG = document.getElementById('inputCurrentG');
