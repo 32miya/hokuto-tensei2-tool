@@ -110,7 +110,7 @@
   .hist-stats b{color:var(--gold);font-size:0.9rem;display:block;}
   .hist-log{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;}
   .hist-row{
-    display:flex;align-items:center;gap:10px;
+    display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;
     background:#0e0506;border:1px solid var(--line);border-radius:8px;
     padding:8px 10px;font-size:0.85rem;
   }
@@ -121,10 +121,21 @@
     background:transparent;border:1px solid var(--line);color:var(--red);
     border-radius:6px;width:28px;height:28px;padding:0;font-size:0.9rem;flex-shrink:0;
   }
+  .hist-row .hist-payout-wrap{
+    display:flex;align-items:center;gap:6px;width:100%;
+    padding-top:4px;border-top:1px solid var(--line);
+  }
+  .hist-row .hist-payout-label{font-size:0.7rem;color:var(--sub);flex-shrink:0;}
+  .hist-row .hist-payout{
+    flex:1;min-width:0;background:#170b0c;border:1px solid var(--line);color:var(--text);
+    font-size:0.8rem;padding:5px 8px;border-radius:6px;
+  }
   .empty{color:var(--sub);font-size:0.8rem;text-align:center;padding:8px 0;}
 
   .chart-card{position:relative;margin-bottom:10px;}
   .chart-card svg{width:100%;height:auto;aspect-ratio:320/160;display:block;touch-action:none;cursor:crosshair;}
+  .chart-card #payoutChart{aspect-ratio:320/90;}
+  .chart-label{font-size:0.68rem;color:var(--sub);margin-bottom:4px;}
   .chart-tooltip{
     position:absolute;pointer-events:none;display:none;
     background:#0e0506;border:1px solid var(--gold);border-radius:8px;
@@ -384,6 +395,11 @@
     <div class="chart-card" id="chartCard" style="display:none;">
       <svg id="histChart" viewBox="0 0 320 160"></svg>
       <div class="chart-tooltip" id="chartTooltip"></div>
+    </div>
+    <div class="chart-card" id="payoutChartCard" style="display:none;margin-top:4px;">
+      <div class="chart-label">獲得枚数</div>
+      <svg id="payoutChart" viewBox="0 0 320 90"></svg>
+      <div class="chart-tooltip" id="payoutTooltip"></div>
     </div>
     <div class="empty" id="chartEmptyHint" style="display:none;">データが2件以上たまるとグラフが表示されます</div>
     <div class="hist-log" id="historyList"><div class="empty">まだデータがありません</div></div>
@@ -832,9 +848,7 @@ function render(){
     histStats.innerHTML = '';
   } else {
     const values = history.map(e => e.g);
-    const avg = values.reduce((a, b) => a + b, 0) / values.length;
     histStats.innerHTML = `
-      <div>平均<b>${avg.toFixed(0)}G</b></div>
       <div>最短<b>${Math.min(...values)}G</b></div>
       <div>最長<b>${Math.max(...values)}G</b></div>
     `;
@@ -845,10 +859,15 @@ function render(){
         <span class="hist-g">${e.g}G</span>
         <span class="hist-ts">${formatTs(e.ts)}</span>
         <button class="hist-del" data-idx="${idx}">×</button>
+        <div class="hist-payout-wrap">
+          <span class="hist-payout-label">獲得枚数</span>
+          <input type="number" class="hist-payout" data-idx="${idx}" placeholder="未入力" value="${e.payout != null ? e.payout : ''}">
+        </div>
       </div>`;
     }).join('');
   }
   renderChart(history);
+  renderPayoutChart(history);
 
   const inputTotalG = document.getElementById('inputTotalG');
   const manualTotalG = loadTotalG();
@@ -985,6 +1004,87 @@ function renderChart(history){
   svg.addEventListener('pointerleave', hide);
 }
 
+// 履歴の折れ線グラフ（あべし数）と横位置を揃えた棒グラフ（獲得枚数）。
+// 尺度がまったく違う2指標なので同一グラフの2軸重ねにはせず、上下に並べたグラフとして揃えている。
+function renderPayoutChart(history){
+  const card = document.getElementById('payoutChartCard');
+  const hasAnyPayout = history.some(e => e.payout != null);
+  if(history.length < 2 || !hasAnyPayout){
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+
+  const W = 320, H = 90, padL = 32, padR = 10, padT = 8, padB = 14;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const n = history.length;
+  const payoutValues = history.filter(e => e.payout != null).map(e => e.payout);
+  const rawMax = Math.max(...payoutValues, 0);
+  const yMax = Math.max(100, Math.ceil(rawMax * 1.15 / 100) * 100);
+  const xAt = i => padL + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
+  const barW = Math.min(20, Math.max(3, (plotW / n) * 0.6));
+  const yAt = v => padT + (1 - Math.min(v, yMax) / yMax) * plotH;
+  const baseline = padT + plotH;
+
+  const parts = [];
+  [0, yMax].forEach(gy => {
+    const y = yAt(gy);
+    parts.push(`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="#3a1e1f" stroke-width="1"/>`);
+    parts.push(`<text x="${padL - 5}" y="${(y + 3).toFixed(1)}" text-anchor="end" font-size="8" fill="#b58e88">${Math.round(gy)}</text>`);
+  });
+
+  history.forEach((e, i) => {
+    if(e.payout == null) return;
+    const x = xAt(i);
+    const y = yAt(e.payout);
+    const h = Math.max(0, baseline - y);
+    parts.push(`<rect x="${(x - barW / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="#5b8fae"/>`);
+  });
+
+  parts.push(`<rect id="payoutHitzone" x="${padL}" y="0" width="${plotW}" height="${H}" fill="transparent"/>`);
+  parts.push(`<line id="payoutCrosshair" x1="0" y1="${padT}" x2="0" y2="${baseline}" stroke="#b58e88" stroke-width="1" style="display:none;"/>`);
+
+  const svg = document.getElementById('payoutChart');
+  svg.innerHTML = parts.join('');
+
+  const tooltip = document.getElementById('payoutTooltip');
+  const crosshair = document.getElementById('payoutCrosshair');
+  const hitzone = document.getElementById('payoutHitzone');
+
+  function showAt(i){
+    const e = history[i];
+    const x = xAt(i);
+    crosshair.setAttribute('x1', x); crosshair.setAttribute('x2', x);
+    crosshair.style.display = 'block';
+    const rect = svg.getBoundingClientRect();
+    const scale = rect.width / W;
+    tooltip.style.left = (x * scale) + 'px';
+    tooltip.style.top = (yAt(e.payout != null ? e.payout : 0) * scale) + 'px';
+    tooltip.innerHTML = e.payout != null
+      ? `<b>${e.payout}枚</b><br>#${i + 1} ${formatTs(e.ts)}`
+      : `<b>未入力</b><br>#${i + 1} ${formatTs(e.ts)}`;
+    tooltip.style.display = 'block';
+  }
+  function hide(){
+    crosshair.style.display = 'none';
+    tooltip.style.display = 'none';
+  }
+  function nearestIndex(clientX){
+    const rect = svg.getBoundingClientRect();
+    const scale = rect.width / W;
+    const userX = (clientX - rect.left) / scale;
+    let best = 0, bestDist = Infinity;
+    for(let i = 0; i < n; i++){
+      const d = Math.abs(xAt(i) - userX);
+      if(d < bestDist){ bestDist = d; best = i; }
+    }
+    return best;
+  }
+  hitzone.addEventListener('pointermove', (ev) => showAt(nearestIndex(ev.clientX)));
+  hitzone.addEventListener('pointerdown', (ev) => showAt(nearestIndex(ev.clientX)));
+  svg.addEventListener('pointerleave', hide);
+}
+
 const inputCurrentG = document.getElementById('inputCurrentG');
 inputCurrentG.addEventListener('input', () => {
   const g = parseInt(inputCurrentG.value, 10);
@@ -1055,6 +1155,17 @@ document.getElementById('historyList').addEventListener('click', (e) => {
   const idx = parseInt(btn.dataset.idx, 10);
   const history = loadHistory();
   history.splice(idx, 1);
+  saveHistory(history);
+  render();
+});
+
+document.getElementById('historyList').addEventListener('change', (e) => {
+  const input = e.target.closest('.hist-payout');
+  if(!input) return;
+  const idx = parseInt(input.dataset.idx, 10);
+  const v = parseInt(input.value, 10);
+  const history = loadHistory();
+  history[idx].payout = Number.isFinite(v) ? v : null;
   saveHistory(history);
   render();
 });
