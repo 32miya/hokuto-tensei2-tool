@@ -255,6 +255,15 @@
       <button class="btn-sub" id="btnTotalGRegister" style="flex:0 0 auto;">登録</button>
     </div>
     <div class="hint" id="totalGStatus">実機のG数カウンター（あべしとは別の、リセットされない累計値）です。登録すると⑦設定判別に使われます。</div>
+
+    <div class="row" style="margin-top:14px;align-items:center;">
+      <span style="font-size:0.82rem;color:var(--sub);flex:1;">天破の刻 突入回数</span>
+      <button class="btn-sub" id="btnTenpaMinus" style="flex:0 0 auto;">−1</button>
+      <span class="counter-display" id="tenpaCount" style="font-size:1.4rem;margin:0 10px;">0</span>
+      <button class="btn-gold" id="btnTenpaPlus" style="flex:0 0 auto;">＋1</button>
+    </div>
+    <div class="hint">天破の刻に突入するたびに＋1してください。台移動までリセットされず、⑦設定判別に使われます。</div>
+
     <label class="toggle-row">
       <input type="checkbox" id="chkSettingChange">
       本日の1G目から打っている（設定変更の可能性あり・天井短縮）
@@ -378,17 +387,11 @@
 
   <div class="card">
     <h2>⑦ 設定判別（AT初当たり確率＋天破の刻）</h2>
-    <div class="hint">①で「現在のG数」を登録すると使われます。未登録の場合は①のあべし履歴から概算します。</div>
+    <div class="hint">①の「現在のG数」登録と「天破の刻 突入回数」カウンターを使って計算します。G数未登録の場合は①のあべし履歴から概算します。</div>
     <div class="hist-stats" id="settingStats"></div>
-    <div class="row" style="margin-top:10px;align-items:center;">
-      <span style="font-size:0.82rem;color:var(--sub);flex:1;">天破の刻 突入回数</span>
-      <button class="btn-sub" id="btnTenpaMinus" style="flex:0 0 auto;">−1</button>
-      <span class="counter-display" id="tenpaCount" style="font-size:1.4rem;margin:0 10px;">0</span>
-      <button class="btn-gold" id="btnTenpaPlus" style="flex:0 0 auto;">＋1</button>
-    </div>
     <div class="setting-list" id="settingList" style="margin-top:10px;"></div>
     <div id="settingBestTag"></div>
-    <div class="hint">総ゲーム数と、AT当選回数（履歴件数）・天破の刻突入回数の両方から実戦確率を計算し、公表されている設定1〜6の数値（AT初当たり1/366.0〜1/273.1、天破の刻1/100.2〜1/81.3）とどれだけ近いかをベイズ推定・統合しています。事前確率は均等と仮定した簡易推定で、サンプル数が少ないと大きくブレます（目安として1000G・当選3回以上が最低ライン）。天破の刻カウントは台移動までリセットされません。</div>
+    <div class="hint">総ゲーム数と、AT当選回数（履歴件数）・天破の刻突入回数の両方から実戦確率を計算し、公表されている設定1〜6の数値（AT初当たり1/366.0〜1/273.1、天破の刻1/100.2〜1/81.3）とどれだけ近いかをベイズ推定・統合しています。事前確率は均等と仮定した簡易推定で、サンプル数が少ないと大きくブレます（目安として1000G・当選3回以上が最低ライン）。</div>
   </div>
 
   <div class="card">
