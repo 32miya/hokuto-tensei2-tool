@@ -183,6 +183,17 @@
   .benefit-icon{font-size:1rem;flex-shrink:0;width:20px;text-align:center;}
   .benefit-manual{cursor:pointer;}
   .benefit-manual input{width:16px;height:16px;flex-shrink:0;}
+
+  .lamp-row{margin-bottom:14px;}
+  .lamp-row:last-child{margin-bottom:0;}
+  .lamp-row label{display:block;font-size:0.82rem;color:var(--sub);margin-bottom:6px;}
+  .lamp-row select{
+    width:100%;background:#0e0506;border:1px solid var(--line);color:var(--text);
+    font-size:0.9rem;padding:10px;border-radius:10px;
+  }
+  .lamp-result{
+    margin-top:6px;font-size:0.82rem;color:var(--gold);min-height:1.2em;
+  }
 </style>
 </head>
 <body>
@@ -316,16 +327,48 @@
   </details>
 
   <div class="card">
-    <h2>⑦ 設定判別（AT初当たり確率ベース）</h2>
+    <h2>⑦ 設定判別（AT初当たり確率＋天破の刻）</h2>
     <div class="hint">①で「現在のG数」を登録すると使われます。未登録の場合は①のあべし履歴から概算します。</div>
     <div class="hist-stats" id="settingStats"></div>
-    <div class="setting-list" id="settingList"></div>
+    <div class="row" style="margin-top:10px;align-items:center;">
+      <span style="font-size:0.82rem;color:var(--sub);flex:1;">天破の刻 突入回数</span>
+      <button class="btn-sub" id="btnTenpaMinus" style="flex:0 0 auto;">−1</button>
+      <span class="counter-display" id="tenpaCount" style="font-size:1.4rem;margin:0 10px;">0</span>
+      <button class="btn-gold" id="btnTenpaPlus" style="flex:0 0 auto;">＋1</button>
+    </div>
+    <div class="setting-list" id="settingList" style="margin-top:10px;"></div>
     <div id="settingBestTag"></div>
-    <div class="hint">総ゲーム数とAT当選回数（履歴件数）から実戦のAT初当たり確率を計算し、公表されている設定1〜6のAT初当たり確率（1/366.0〜1/273.1）とどれだけ近いかをベイズ推定しています。設定6段階の事前確率は均等と仮定した簡易推定で、サンプル数が少ないと大きくブレます（目安として1000G・当選3回以上が最低ライン）。他の設定差要素（あべし振り分けそのものは設定1データのみ）と併せて参考にしてください。</div>
+    <div class="hint">総ゲーム数と、AT当選回数（履歴件数）・天破の刻突入回数の両方から実戦確率を計算し、公表されている設定1〜6の数値（AT初当たり1/366.0〜1/273.1、天破の刻1/100.2〜1/81.3）とどれだけ近いかをベイズ推定・統合しています。事前確率は均等と仮定した簡易推定で、サンプル数が少ないと大きくブレます（目安として1000G・当選3回以上が最低ライン）。天破の刻カウントは台移動までリセットされません。</div>
+  </div>
+
+  <div class="card">
+    <h2>⑧ ランプ示唆チェック</h2>
+    <div class="lamp-row">
+      <label>ランプA（入賞ランプ）</label>
+      <select id="selLampA">
+        <option value="">選択してください</option>
+      </select>
+      <div class="lamp-result" id="lampAResult"></div>
+    </div>
+    <div class="lamp-row">
+      <label>ランプB（上部中央ランプ）</label>
+      <select id="selLampB">
+        <option value="">選択してください</option>
+      </select>
+      <div class="lamp-result" id="lampBResult"></div>
+    </div>
+    <div class="lamp-row">
+      <label>ランプC（サブ液晶周辺ランプ）</label>
+      <select id="selLampC">
+        <option value="">選択してください</option>
+      </select>
+      <div class="lamp-result" id="lampCResult"></div>
+    </div>
+    <div class="hint">通常時は100G消化ごとにいずれかのランプが発光します。発光した色・パターンを選ぶと示唆内容が表示されます。</div>
   </div>
 
   <div class="card counter-card">
-    <h2 style="justify-content:center;">⑧ 単発ボーナス連続カウント</h2>
+    <h2 style="justify-content:center;">⑨ 単発ボーナス連続カウント</h2>
     <div class="counter-display" id="tanpatsuCount">0</div>
     <div class="counter-row">
       <button class="btn-sub" id="btnTanpatsuMinus">−1</button>
@@ -353,7 +396,9 @@
     <a href="https://nana-press.com/kaiseki/machine/1059/33039/" target="_blank" rel="noopener">nana-press.com</a>（モード移行率・設定差）、
     <a href="https://note.com/norihey_01/n/ne90cfaa4f7d9" target="_blank" rel="noopener">note.com/norihey_01</a>（ゾーン外プレ前兆）、
     <a href="https://1geki.jp/slot/l_hokuto_tensei2/0/" target="_blank" rel="noopener">1geki.jp</a>（AT初当たり確率・設定1〜6）、
-    <a href="https://nana-press.com/kaiseki/machine/1059/33018/" target="_blank" rel="noopener">nana-press.com</a>（天井恩恵・発動条件）
+    <a href="https://nana-press.com/kaiseki/machine/1059/33018/" target="_blank" rel="noopener">nana-press.com</a>（天井恩恵・発動条件）、
+    <a href="https://slomiru.com/hokuto_tensei2" target="_blank" rel="noopener">slomiru.com</a>（天破の刻突入率・設定1〜6）、
+    <a href="https://1geki.jp/slot/l_hokuto_tensei2/53/" target="_blank" rel="noopener">1geki.jp</a>（ランプA/B/C示唆）
   </footer>
 </div>
 
@@ -389,6 +434,38 @@ const ZONES = [
 ];
 // AT初当たり確率の分母（設定1〜6）。1geki.jpの解析ページより。
 const AT_RATE_DENOM = [366.0, 357.0, 336.3, 298.7, 283.2, 273.1];
+// 天破の刻 突入率の分母（設定1〜6）。slomiru.com / 1geki.jpの解析ページより。
+const TENPA_RATE_DENOM = [100.2, 99.4, 97.1, 91.4, 85.8, 81.3];
+
+// ランプA/B/C の色・パターンごとの示唆内容（1geki.jpのランプ示唆まとめより）。
+const LAMP_A_OPTIONS = [
+  {label:'白色・点灯', text:'1280あべし以内の期待度アップ（弱）'},
+  {label:'白色・点滅', text:'1280あべし以内の期待度アップ（強）'},
+  {label:'水色・点灯', text:'896あべし以内の期待度アップ（弱）'},
+  {label:'水色・点滅', text:'576あべし以内の期待度アップ（弱）'},
+  {label:'水色・点灯＋上に白流れ', text:'896あべし以内の期待度アップ（強）'},
+  {label:'水色・点滅＋上に白流れ', text:'576あべし以内の期待度アップ（強）'},
+  {label:'黄緑・点灯', text:'通常B以上を否定できれば設定2以上濃厚'},
+  {label:'黄緑・点滅', text:'通常C以上を否定できれば設定2以上濃厚'},
+  {label:'金色・点灯', text:'通常B以上を否定できれば設定4以上濃厚'},
+  {label:'金色・点滅', text:'通常C以上を否定できれば設定4以上濃厚'},
+  {label:'紫色・点灯', text:'通常B以上を否定できれば設定6濃厚'},
+  {label:'紫色・点滅', text:'通常C以上を否定できれば設定6濃厚'}
+];
+const LAMP_B_OPTIONS = [
+  {label:'白色・点灯', text:'設定2・4示唆'},
+  {label:'白色・点滅', text:'設定3・5示唆'},
+  {label:'水色・点灯', text:'高設定示唆（弱）'},
+  {label:'水色・点滅', text:'高設定示唆（強）'},
+  {label:'黄緑・点灯', text:'設定2以上濃厚'},
+  {label:'黄緑・点滅', text:'設定4以上濃厚'},
+  {label:'金色・点灯', text:'設定6濃厚'}
+];
+const LAMP_C_OPTIONS = [
+  {label:'水色・点灯', text:'早い初当たり示唆（弱）'},
+  {label:'黄緑・点灯', text:'早い初当たり示唆（中）'},
+  {label:'金色・点灯', text:'早い初当たり示唆（強）'}
+];
 const STORAGE_KEY_HISTORY = 'hokuto_tensei2_abeshi_history_v1';
 const STORAGE_KEY_CURRENT = 'hokuto_tensei2_current_g_v1';
 const STORAGE_KEY_SETCHANGE = 'hokuto_tensei2_setchange_v1';
@@ -397,6 +474,7 @@ const STORAGE_KEY_OMEN = 'hokuto_tensei2_omen_v1';
 const STORAGE_KEY_TOTALG = 'hokuto_tensei2_total_g_v1';
 const STORAGE_KEY_SHOUBU = 'hokuto_tensei2_shoubu_v1';
 const STORAGE_KEY_BALANCE = 'hokuto_tensei2_balance_v1';
+const STORAGE_KEY_TENPA = 'hokuto_tensei2_tenpa_count_v1';
 const COST_PER_GAME = 3; // 1Gあたりの消化枚数（通常3枚/G想定）
 const BALANCE_DANGER = -1500; // この差枚数を下回るとモード確率が高くなくても「やめ時濃厚」寄りに
 
@@ -493,6 +571,14 @@ function loadBalance(){
 function saveBalance(v){
   localStorage.setItem(STORAGE_KEY_BALANCE, String(v));
 }
+function loadTenpaCount(){
+  const raw = localStorage.getItem(STORAGE_KEY_TENPA);
+  const g = parseInt(raw, 10);
+  return Number.isFinite(g) && g >= 0 ? g : 0;
+}
+function saveTenpaCount(g){
+  localStorage.setItem(STORAGE_KEY_TENPA, String(Math.max(0, g)));
+}
 
 // 現在のゲーム数までまだ当選していない、という条件付き確率（生存確率）でモードを推定する。
 // 過去の当選履歴は「モードが再抽選された別セッションの結果」なので、今回の推定には使わない。
@@ -569,15 +655,19 @@ function logBinomCoeff(n, k){
   }
   return logC;
 }
-function computeSettingLikelihood(totalGames, hitCount){
+// totalGames回中hitCount回起きた事象について、rateDenom（設定ごとの確率の分母）の
+// 各設定を仮定したときの対数尤度を返す（正規化前）。データなしの場合は全設定0（=一様）。
+function settingLogLikelihood(totalGames, hitCount, rateDenom){
   if(totalGames <= 0 || hitCount <= 0){
-    return AT_RATE_DENOM.map(() => 1 / AT_RATE_DENOM.length);
+    return rateDenom.map(() => 0);
   }
   const logC = logBinomCoeff(totalGames, hitCount);
-  const logLs = AT_RATE_DENOM.map(denom => {
+  return rateDenom.map(denom => {
     const p = 1 / denom;
     return logC + hitCount * Math.log(p) + (totalGames - hitCount) * Math.log(1 - p);
   });
+}
+function normalizeLogLikelihoods(logLs){
   const maxLog = Math.max(...logLs);
   const exps = logLs.map(l => Math.exp(l - maxLog));
   const sum = exps.reduce((a, b) => a + b, 0);
@@ -771,22 +861,27 @@ function render(){
   const estimatedTotalG = history.reduce((sum, e) => sum + e.g, 0) + currentG;
   const totalGames = manualTotalG || estimatedTotalG;
   const hitCount = history.length;
+  const tenpaCount = loadTenpaCount();
+  document.getElementById('tenpaCount').textContent = tenpaCount;
+
   const settingStats = document.getElementById('settingStats');
   const settingList = document.getElementById('settingList');
   const settingBestTag = document.getElementById('settingBestTag');
-  if(hitCount === 0){
+  if(hitCount === 0 && tenpaCount === 0){
     settingStats.innerHTML = manualTotalG ? `<div>総G数<b>${manualTotalG}G</b><br><span style="font-size:0.65rem;">入力値（登録済み）</span></div>` : '';
-    settingList.innerHTML = '<div class="empty">あべし成立を1回以上記録すると判別を開始します</div>';
+    settingList.innerHTML = '<div class="empty">あべし成立か天破の刻突入を1回以上記録すると判別を開始します</div>';
     settingBestTag.innerHTML = '';
     document.getElementById('qsSetting').textContent = 'データ不足';
   } else {
-    const observedDenom = totalGames / hitCount;
-    settingStats.innerHTML = `
-      <div>総G数<b>${totalGames}G</b><br><span style="font-size:0.65rem;">${manualTotalG ? '入力値' : '履歴から概算'}</span></div>
-      <div>当選回数<b>${hitCount}回</b></div>
-      <div>実戦値<b>1/${observedDenom.toFixed(1)}</b></div>
-    `;
-    const likelihoods = computeSettingLikelihood(totalGames, hitCount);
+    const statParts = [`<div>総G数<b>${totalGames}G</b><br><span style="font-size:0.65rem;">${manualTotalG ? '入力値' : '履歴から概算'}</span></div>`];
+    statParts.push(`<div>AT当選<b>${hitCount}回</b></div>`);
+    if(hitCount > 0) statParts.push(`<div>実戦値<b>1/${(totalGames / hitCount).toFixed(1)}</b></div>`);
+    settingStats.innerHTML = statParts.join('');
+
+    const atLogL = settingLogLikelihood(totalGames, hitCount, AT_RATE_DENOM);
+    const tenpaLogL = settingLogLikelihood(totalGames, tenpaCount, TENPA_RATE_DENOM);
+    const combinedLogL = atLogL.map((v, i) => v + tenpaLogL[i]);
+    const likelihoods = normalizeLogLikelihoods(combinedLogL);
     let bestI = 0;
     settingList.innerHTML = likelihoods.map((p, i) => {
       if(p > likelihoods[bestI]) bestI = i;
@@ -797,9 +892,9 @@ function render(){
         <div class="setting-pct">${pct}%</div>
       </div>`;
     }).join('');
-    const lowSample = totalGames < 1000 || hitCount < 3;
+    const lowSample = totalGames < 1000 || (hitCount < 3 && tenpaCount < 5);
     settingBestTag.innerHTML = `<span class="best-tag">最有力：設定${bestI+1}（${(likelihoods[bestI]*100).toFixed(1)}%）</span>` +
-      (lowSample ? '<div class="warn" style="margin-top:8px;">⚠ サンプルが少なく参考程度です（目安: 1000G・当選3回以上）</div>' : '');
+      (lowSample ? '<div class="warn" style="margin-top:8px;">⚠ サンプルが少なく参考程度です（目安: 1000G・当選3回以上 or 天破5回以上）</div>' : '');
     document.getElementById('qsSetting').textContent =
       `設定${bestI+1} ${(likelihoods[bestI]*100).toFixed(0)}%${lowSample ? '（参考）' : ''}`;
   }
@@ -974,8 +1069,35 @@ document.getElementById('btnClear').addEventListener('click', () => {
   localStorage.removeItem(STORAGE_KEY_TOTALG);
   localStorage.removeItem(STORAGE_KEY_SHOUBU);
   localStorage.removeItem(STORAGE_KEY_BALANCE);
+  localStorage.removeItem(STORAGE_KEY_TENPA);
   render();
 });
+
+document.getElementById('btnTenpaPlus').addEventListener('click', () => {
+  saveTenpaCount(loadTenpaCount() + 1);
+  render();
+});
+document.getElementById('btnTenpaMinus').addEventListener('click', () => {
+  saveTenpaCount(loadTenpaCount() - 1);
+  render();
+});
+
+function initLampSelect(selectId, resultId, options){
+  const sel = document.getElementById(selectId);
+  options.forEach((opt, i) => {
+    const el = document.createElement('option');
+    el.value = i;
+    el.textContent = opt.label;
+    sel.appendChild(el);
+  });
+  sel.addEventListener('change', () => {
+    const result = document.getElementById(resultId);
+    result.textContent = sel.value === '' ? '' : options[parseInt(sel.value, 10)].text;
+  });
+}
+initLampSelect('selLampA', 'lampAResult', LAMP_A_OPTIONS);
+initLampSelect('selLampB', 'lampBResult', LAMP_B_OPTIONS);
+initLampSelect('selLampC', 'lampCResult', LAMP_C_OPTIONS);
 
 render();
 </script>
