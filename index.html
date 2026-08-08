@@ -159,6 +159,11 @@
   .yame-badge.yellow{color:var(--gold);border-color:#6a5323;}
   .yame-badge.red{color:var(--red);border-color:var(--red-dark);}
   .yame-pct{font-size:2rem;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;}
+
+  .setting-list{display:flex;flex-direction:column;gap:6px;margin-top:4px;}
+  .setting-row{display:flex;align-items:center;gap:10px;}
+  .setting-label{width:44px;flex-shrink:0;font-size:0.8rem;font-weight:700;}
+  .setting-pct{width:48px;text-align:right;font-size:0.8rem;font-variant-numeric:tabular-nums;color:var(--sub);}
 </style>
 </head>
 <body>
@@ -240,12 +245,20 @@
 
   <details class="card" style="margin-bottom:14px;">
     <summary>設定差・ATレベルについて（参考情報）</summary>
-    <p><b>設定示唆</b>：筐体中央ランプ金点灯／両サイドランプ紫点灯・点滅／サミートロフィー虹色→いずれも設定6濃厚〜確定。AT初当たり確率の目安は設定1=1/366.0、設定6=1/273.1。</p>
+    <p><b>設定示唆</b>：筐体中央ランプ金点灯／両サイドランプ紫点灯・点滅／サミートロフィー虹色→いずれも設定6濃厚〜確定。</p>
     <p><b>ATレベル</b>：AT当選時にLv1〜4が決定し、AT終了まで固定。レベルが高いほど、各セット開始時の闘神レベル（A〜D、Dが最上位）が優遇されます。オーラ色は白→青→黄→緑→赤→紫→虹の順で期待度が上がります。</p>
   </details>
 
+  <div class="card">
+    <h2>⑦ 設定判別（AT初当たり確率ベース）</h2>
+    <div class="hist-stats" id="settingStats"></div>
+    <div class="setting-list" id="settingList"></div>
+    <div id="settingBestTag"></div>
+    <div class="hint">総ゲーム数（履歴合計＋現在のゲーム数）とAT当選回数から実戦のAT初当たり確率を計算し、公表されている設定1〜6のAT初当たり確率（1/366.0〜1/273.1）とどれだけ近いかをベイズ推定しています。設定6ずつの事前確率は均等と仮定した簡易推定で、サンプル数が少ないと大きくブレます（目安として1000G・当選3回以上が最低ライン）。他の設定差要素（あべし振り分けそのものは設定1データのみ）と併せて参考にしてください。</div>
+  </div>
+
   <div class="card counter-card">
-    <h2 style="justify-content:center;">⑦ 単発ボーナス連続カウント</h2>
+    <h2 style="justify-content:center;">⑧ 単発ボーナス連続カウント</h2>
     <div class="counter-display" id="tanpatsuCount">0</div>
     <div class="counter-row">
       <button class="btn-sub" id="btnTanpatsuMinus">−1</button>
@@ -271,7 +284,8 @@
     参考値です。実機の挙動を保証するものではありません。台移動・電源再投入時は必ずクリアしてください。<br>
     データ出典: <a href="https://p-town.dmm.com/machines/4909" target="_blank" rel="noopener">p-town.dmm.com</a>（規定あべし振り分け・設定1）、
     <a href="https://nana-press.com/kaiseki/machine/1059/33039/" target="_blank" rel="noopener">nana-press.com</a>（モード移行率・設定差）、
-    <a href="https://note.com/norihey_01/n/ne90cfaa4f7d9" target="_blank" rel="noopener">note.com/norihey_01</a>（ゾーン外プレ前兆）
+    <a href="https://note.com/norihey_01/n/ne90cfaa4f7d9" target="_blank" rel="noopener">note.com/norihey_01</a>（ゾーン外プレ前兆）、
+    <a href="https://1geki.jp/slot/l_hokuto_tensei2/0/" target="_blank" rel="noopener">1geki.jp</a>（AT初当たり確率・設定1〜6）
   </footer>
 </div>
 
@@ -305,6 +319,8 @@ const ZONES = [
   {min:421, max:429},
   {min:489, max:495}
 ];
+// AT初当たり確率の分母（設定1〜6）。1geki.jpの解析ページより。
+const AT_RATE_DENOM = [366.0, 357.0, 336.3, 298.7, 283.2, 273.1];
 const STORAGE_KEY_HISTORY = 'hokuto_tensei2_abeshi_history_v1';
 const STORAGE_KEY_CURRENT = 'hokuto_tensei2_current_g_v1';
 const STORAGE_KEY_SETCHANGE = 'hokuto_tensei2_setchange_v1';
@@ -446,6 +462,31 @@ function expectedRemaining(live, ctx, currentG){
   return exp;
 }
 
+// 総ゲーム数・AT当選回数から、設定1〜6それぞれの公表AT初当たり確率のもとでの二項分布尤度を計算し、
+// 事前確率を均等と仮定してベイズ正規化する（対数空間で計算しオーバーフローを回避）。
+function logBinomCoeff(n, k){
+  if(k <= 0 || k >= n) return 0;
+  let logC = 0;
+  for(let i = 1; i <= k; i++){
+    logC += Math.log((n - k + i) / i);
+  }
+  return logC;
+}
+function computeSettingLikelihood(totalGames, hitCount){
+  if(totalGames <= 0 || hitCount <= 0){
+    return AT_RATE_DENOM.map(() => 1 / AT_RATE_DENOM.length);
+  }
+  const logC = logBinomCoeff(totalGames, hitCount);
+  const logLs = AT_RATE_DENOM.map(denom => {
+    const p = 1 / denom;
+    return logC + hitCount * Math.log(p) + (totalGames - hitCount) * Math.log(1 - p);
+  });
+  const maxLog = Math.max(...logLs);
+  const exps = logLs.map(l => Math.exp(l - maxLog));
+  const sum = exps.reduce((a, b) => a + b, 0);
+  return exps.map(e => e / sum);
+}
+
 function render(){
   const currentG = loadCurrentG();
   const inputCurrentG = document.getElementById('inputCurrentG');
@@ -585,6 +626,38 @@ function render(){
     }).join('');
   }
   renderChart(history);
+
+  const totalGames = history.reduce((sum, e) => sum + e.g, 0) + currentG;
+  const hitCount = history.length;
+  const settingStats = document.getElementById('settingStats');
+  const settingList = document.getElementById('settingList');
+  const settingBestTag = document.getElementById('settingBestTag');
+  if(hitCount === 0){
+    settingStats.innerHTML = '';
+    settingList.innerHTML = '<div class="empty">あべし成立を1回以上記録すると判別を開始します</div>';
+    settingBestTag.innerHTML = '';
+  } else {
+    const observedDenom = totalGames / hitCount;
+    settingStats.innerHTML = `
+      <div>総G数<b>${totalGames}G</b></div>
+      <div>当選回数<b>${hitCount}回</b></div>
+      <div>実戦値<b>1/${observedDenom.toFixed(1)}</b></div>
+    `;
+    const likelihoods = computeSettingLikelihood(totalGames, hitCount);
+    let bestI = 0;
+    settingList.innerHTML = likelihoods.map((p, i) => {
+      if(p > likelihoods[bestI]) bestI = i;
+      const pct = (p * 100).toFixed(1);
+      return `<div class="setting-row">
+        <div class="setting-label">設定${i+1}</div>
+        <div class="state-bar-bg"><div class="state-bar-fill fill-C" style="width:${pct}%"></div></div>
+        <div class="setting-pct">${pct}%</div>
+      </div>`;
+    }).join('');
+    const lowSample = totalGames < 1000 || hitCount < 3;
+    settingBestTag.innerHTML = `<span class="best-tag">最有力：設定${bestI+1}（${(likelihoods[bestI]*100).toFixed(1)}%）</span>` +
+      (lowSample ? '<div class="warn" style="margin-top:8px;">⚠ サンプルが少なく参考程度です（目安: 1000G・当選3回以上）</div>' : '');
+  }
 }
 
 function renderChart(history){
