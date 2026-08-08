@@ -146,6 +146,24 @@
   footer{text-align:center;font-size:0.68rem;color:#6b4d49;margin-top:18px;line-height:1.6;}
   footer a{color:#8a6560;}
 
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(8,3,4,0.75);
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;z-index:10;
+  }
+  .modal-box{
+    width:100%;max-width:400px;
+    background:linear-gradient(180deg,var(--panel2),var(--panel));
+    border:1px solid var(--gold);border-radius:14px;
+    padding:18px;box-shadow:0 8px 28px rgba(0,0,0,0.5);
+  }
+  .modal-box h3{margin:0 0 8px;color:var(--gold);font-size:1rem;}
+  .modal-box input{
+    width:100%;background:#0e0506;border:1px solid var(--line);
+    color:var(--text);font-size:1.2rem;font-weight:700;
+    padding:12px 10px;border-radius:10px;text-align:center;margin-top:10px;
+  }
+
   .toggle-row{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:0.78rem;color:var(--sub);}
   .toggle-row input{width:16px;height:16px;flex:0 0 auto;}
 
@@ -416,6 +434,18 @@
     <a href="https://slomiru.com/hokuto_tensei2" target="_blank" rel="noopener">slomiru.com</a>（天破の刻突入率・設定1〜6）、
     <a href="https://1geki.jp/slot/l_hokuto_tensei2/53/" target="_blank" rel="noopener">1geki.jp</a>（ランプA/B/C示唆）
   </footer>
+</div>
+
+<div class="modal-overlay" id="payoutModalOverlay" style="display:none;">
+  <div class="modal-box">
+    <h3>獲得枚数を入力</h3>
+    <div class="hint"><span id="modalG">0</span>Gでのあべし成立を記録します。今回のAT・ボーナスで獲得した枚数を入力してください（あとから履歴で編集も可能です）。</div>
+    <input type="number" id="modalPayoutInput" placeholder="獲得枚数（未入力でも記録できます）">
+    <div class="row" style="margin-top:14px;">
+      <button class="btn-sub" id="btnPayoutCancel" style="flex:1;">キャンセル</button>
+      <button class="btn-gold" id="btnPayoutConfirm" style="flex:1;">記録してリセット</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1123,17 +1153,43 @@ document.getElementById('inputBalance').addEventListener('input', (e) => {
   render();
 });
 
+const payoutModalOverlay = document.getElementById('payoutModalOverlay');
+const modalPayoutInput = document.getElementById('modalPayoutInput');
+
 document.getElementById('btnRegister').addEventListener('click', () => {
   const currentG = loadCurrentG();
   if(currentG < 1){ inputCurrentG.focus(); return; }
+  document.getElementById('modalG').textContent = currentG;
+  modalPayoutInput.value = '';
+  payoutModalOverlay.style.display = 'flex';
+  modalPayoutInput.focus();
+});
+
+function closePayoutModal(){
+  payoutModalOverlay.style.display = 'none';
+}
+function confirmPayoutModal(){
+  const currentG = loadCurrentG();
+  if(currentG < 1){ closePayoutModal(); return; }
+  const payoutRaw = parseInt(modalPayoutInput.value, 10);
+  const payout = Number.isFinite(payoutRaw) ? payoutRaw : null;
   const history = loadHistory();
-  history.push({g: currentG, ts: Date.now()});
+  history.push({g: currentG, ts: Date.now(), payout});
   saveHistory(history);
   saveCurrentG(0);
   saveTanpatsu(0);
   saveOmen(null);
   saveShoubu(false);
+  closePayoutModal();
   render();
+}
+document.getElementById('btnPayoutConfirm').addEventListener('click', confirmPayoutModal);
+document.getElementById('btnPayoutCancel').addEventListener('click', closePayoutModal);
+payoutModalOverlay.addEventListener('click', (e) => {
+  if(e.target === payoutModalOverlay) closePayoutModal();
+});
+modalPayoutInput.addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') confirmPayoutModal();
 });
 
 document.getElementById('btnTanpatsuPlus').addEventListener('click', () => {
