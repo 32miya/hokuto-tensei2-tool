@@ -282,6 +282,11 @@
     </div>
     <div class="hint">通常A（当たりまで最も長引くモード）である確率を「やめ時確率」の目安として表示しています。100%に近いほど長期化しやすい状態です。⑥のゾーン外プレ前兆の判定があれば、そちらを優先して反映します。</div>
     <div class="hint" id="yameExpected"></div>
+    <div class="row" style="margin-top:12px;">
+      <input type="number" id="inputBalance" placeholder="現在の差枚数（マイナスも入力可）">
+    </div>
+    <div class="hint" id="balanceInfo"></div>
+    <div class="hint">差枚数が大きくマイナスの場合、モード確率だけの判定より早めに「やめ時濃厚」を表示します（3枚/G消化と仮定した投資目安つき）。</div>
   </div>
 
   <div class="card">
@@ -391,6 +396,9 @@ const STORAGE_KEY_TANPATSU = 'hokuto_tensei2_tanpatsu_v1';
 const STORAGE_KEY_OMEN = 'hokuto_tensei2_omen_v1';
 const STORAGE_KEY_TOTALG = 'hokuto_tensei2_total_g_v1';
 const STORAGE_KEY_SHOUBU = 'hokuto_tensei2_shoubu_v1';
+const STORAGE_KEY_BALANCE = 'hokuto_tensei2_balance_v1';
+const COST_PER_GAME = 3; // 1Gあたりの消化枚数（通常3枚/G想定）
+const BALANCE_DANGER = -1500; // この差枚数を下回るとモード確率が高くなくても「やめ時濃厚」寄りに
 
 function activeData(){
   const useSetChange = loadSetChange();
@@ -476,6 +484,14 @@ function loadShoubu(){
 function saveShoubu(on){
   if(on){ localStorage.setItem(STORAGE_KEY_SHOUBU, '1'); }
   else { localStorage.removeItem(STORAGE_KEY_SHOUBU); }
+}
+function loadBalance(){
+  const raw = localStorage.getItem(STORAGE_KEY_BALANCE);
+  const v = parseInt(raw, 10);
+  return Number.isFinite(v) ? v : 0;
+}
+function saveBalance(v){
+  localStorage.setItem(STORAGE_KEY_BALANCE, String(v));
 }
 
 // 現在のゲーム数までまだ当選していない、という条件付き確率（生存確率）でモードを推定する。
@@ -664,11 +680,19 @@ function render(){
 
   const yamePctVal = live.post.A;
   const pastZone1 = currentG >= ZONES[0].min;
+  const inputBalance = document.getElementById('inputBalance');
+  const balance = loadBalance();
+  if(document.activeElement !== inputBalance){
+    inputBalance.value = balance || '';
+  }
   const yameBadge = document.getElementById('yameBadge');
   let yameLabel, yameColor;
   if(omen && omen.result === 'B+'){
     yameLabel = '続行推奨（前兆ありで否定）';
     yameColor = 'green';
+  } else if(balance <= BALANCE_DANGER && yamePctVal >= 0.55){
+    yameLabel = 'やめ時濃厚（差枚マイナス大）';
+    yameColor = 'red';
   } else if(yamePctVal >= 0.80 && pastZone1){
     yameLabel = 'やめ時濃厚';
     yameColor = 'red';
@@ -688,6 +712,12 @@ function render(){
   const expG = expectedRemaining(live, ctx, currentG);
   document.getElementById('yameExpected').textContent =
     `続行した場合の残り期待ゲーム数の目安: 約${Math.round(expG)}G（攻略サイト情報では、⑥第1区間48G付近でノーヒットの場合のヤメ目安として期待値104〜105%程度という情報もあります）`;
+  const investToExpected = Math.round(expG * COST_PER_GAME);
+  const investToTenjou = Math.round(remain * COST_PER_GAME);
+  document.getElementById('balanceInfo').innerHTML =
+    `現在の差枚数: <b>${balance >= 0 ? '+' : ''}${balance}枚</b><br>` +
+    `期待当選までの追加投資目安: 約${investToExpected}枚（${COST_PER_GAME}枚/G想定）<br>` +
+    `天井到達までの追加投資目安（最大）: 約${investToTenjou}枚`;
 
   const predList = document.getElementById('predList');
   predList.innerHTML = '';
@@ -892,6 +922,12 @@ document.getElementById('chkShoubuDamashii').addEventListener('change', (e) => {
   render();
 });
 
+document.getElementById('inputBalance').addEventListener('input', (e) => {
+  const v = parseInt(e.target.value, 10);
+  saveBalance(Number.isFinite(v) ? v : 0);
+  render();
+});
+
 document.getElementById('btnRegister').addEventListener('click', () => {
   const currentG = loadCurrentG();
   if(currentG < 1){ inputCurrentG.focus(); return; }
@@ -937,6 +973,7 @@ document.getElementById('btnClear').addEventListener('click', () => {
   localStorage.removeItem(STORAGE_KEY_OMEN);
   localStorage.removeItem(STORAGE_KEY_TOTALG);
   localStorage.removeItem(STORAGE_KEY_SHOUBU);
+  localStorage.removeItem(STORAGE_KEY_BALANCE);
   render();
 });
 
