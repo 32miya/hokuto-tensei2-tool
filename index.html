@@ -305,6 +305,16 @@
       </label>
     </div>
     <div class="hint">上2つは現在のゲーム数から自動判定。勝舞魂の保有数はAT開始画面で確認して手動チェックしてください。</div>
+
+    <label class="toggle-row">
+      交換率：
+      <select id="selExchangeRate" style="margin-left:6px;background:#0e0506;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:4px 8px;">
+        <option value="equal">等価交換</option>
+        <option value="rate56">5.6枚交換</option>
+      </select>
+    </label>
+    <div class="benefit-list" id="aimLineList"></div>
+    <div class="hint">攻略サイト（nana-press.com）の期待値計算に基づく狙い目ラインです。当ツールの「①現在のあべし数」とそのまま比較しています。</div>
   </div>
 
   <div class="card">
@@ -354,6 +364,16 @@
     <summary>設定差・ATレベルについて（参考情報）</summary>
     <p><b>設定示唆</b>：筐体中央ランプ金点灯／両サイドランプ紫点灯・点滅／サミートロフィー虹色→いずれも設定6濃厚〜確定。</p>
     <p><b>ATレベル</b>：AT当選時にLv1〜4が決定し、AT終了まで固定。レベルが高いほど、各セット開始時の闘神レベル（A〜D、Dが最上位）が優遇されます。オーラ色は白→青→黄→緑→赤→紫→虹の順で期待度が上がります。</p>
+  </details>
+
+  <details class="card" style="margin-bottom:14px;">
+    <summary>天井期待値の目安・AT終了後のヤメ時（参考情報）</summary>
+    <p style="color:var(--sub);">nana-press.comの期待値シミュレーションより（設定1基準・「1G消化＝1.5あべし」という同サイト独自の換算を使用した参考値。実際のあべし増加は1G＝1あべしのままです）。</p>
+    <p><b>通常時・等価交換</b>：300G -98円 → 350G +214円(転換) → 500G +1,424円 → 750G +4,795円 → 900G +8,103円</p>
+    <p><b>通常時・5.6枚交換</b>：400G -548円 → 500G +303円(転換) → 750G +3,649円 → 900G +6,934円</p>
+    <p><b>リセット時・等価交換</b>：300G +332円(転換) → 600G +3,903円</p>
+    <p><b>リセット時・5.6枚交換</b>：400G +188円(転換) → 600G +2,853円</p>
+    <p><b>AT終了後のヤメ時</b>：基本は即ヤメ。余裕があれば128あべしまでフォロー（天国濃厚）、余剰分が多ければ256あべしまでフォロー（ゾーン対象）。天撃失敗後は天国濃厚のため、必ずAT当選まで続行すべき。</p>
   </details>
 
   <div class="card">
@@ -431,7 +451,7 @@
     <a href="https://nana-press.com/kaiseki/machine/1059/33039/" target="_blank" rel="noopener">nana-press.com</a>（モード移行率・設定差）、
     <a href="https://note.com/norihey_01/n/ne90cfaa4f7d9" target="_blank" rel="noopener">note.com/norihey_01</a>（ゾーン外プレ前兆）、
     <a href="https://1geki.jp/slot/l_hokuto_tensei2/0/" target="_blank" rel="noopener">1geki.jp</a>（AT初当たり確率・設定1〜6）、
-    <a href="https://nana-press.com/kaiseki/machine/1059/33018/" target="_blank" rel="noopener">nana-press.com</a>（天井恩恵・発動条件）、
+    <a href="https://nana-press.com/kaiseki/machine/1059/33018/" target="_blank" rel="noopener">nana-press.com</a>（天井恩恵・発動条件・期待値・狙い目・ヤメ時）、
     <a href="https://slomiru.com/hokuto_tensei2" target="_blank" rel="noopener">slomiru.com</a>（天破の刻突入率・設定1〜6）、
     <a href="https://1geki.jp/slot/l_hokuto_tensei2/53/" target="_blank" rel="noopener">1geki.jp</a>（ランプA/B/C示唆）
   </footer>
@@ -483,6 +503,17 @@ const ZONES = [
 const AT_RATE_DENOM = [366.0, 357.0, 336.3, 298.7, 283.2, 273.1];
 // 天破の刻 突入率の分母（設定1〜6）。slomiru.com / 1geki.jpの解析ページより。
 const TENPA_RATE_DENOM = [100.2, 99.4, 97.1, 91.4, 85.8, 81.3];
+// 天井の期待値による狙い目ライン（あべし単位）。nana-press.comの期待値シミュレーションより。
+const AIM_LINES = {
+  normal: {
+    equal:  {plus: 525, aim: 750},
+    rate56: {plus: 750, aim: 900}
+  },
+  reset: {
+    equal:  {aim: 600},
+    rate56: {aim: 750}
+  }
+};
 
 // ランプA/B/C の色・パターンごとの示唆内容（1geki.jpのランプ示唆まとめより）。
 const LAMP_A_OPTIONS = [
@@ -520,6 +551,7 @@ const STORAGE_KEY_TANPATSU = 'hokuto_tensei2_tanpatsu_v1';
 const STORAGE_KEY_OMEN = 'hokuto_tensei2_omen_v1';
 const STORAGE_KEY_TOTALG = 'hokuto_tensei2_total_g_v1';
 const STORAGE_KEY_SHOUBU = 'hokuto_tensei2_shoubu_v1';
+const STORAGE_KEY_EXCHANGE = 'hokuto_tensei2_exchange_v1';
 const STORAGE_KEY_BALANCE = 'hokuto_tensei2_balance_v1';
 const STORAGE_KEY_TENPA = 'hokuto_tensei2_tenpa_count_v1';
 const COST_PER_GAME = 3; // 1Gあたりの消化枚数（通常3枚/G想定）
@@ -609,6 +641,13 @@ function loadShoubu(){
 function saveShoubu(on){
   if(on){ localStorage.setItem(STORAGE_KEY_SHOUBU, '1'); }
   else { localStorage.removeItem(STORAGE_KEY_SHOUBU); }
+}
+function loadExchangeRate(){
+  const v = localStorage.getItem(STORAGE_KEY_EXCHANGE);
+  return v === 'rate56' ? 'rate56' : 'equal';
+}
+function saveExchangeRate(v){
+  localStorage.setItem(STORAGE_KEY_EXCHANGE, v === 'rate56' ? 'rate56' : 'equal');
 }
 function loadBalance(){
   const raw = localStorage.getItem(STORAGE_KEY_BALANCE);
@@ -763,6 +802,22 @@ function render(){
   if(document.activeElement !== chkShoubuDamashii){
     chkShoubuDamashii.checked = loadShoubu();
   }
+
+  const selExchangeRate = document.getElementById('selExchangeRate');
+  const exchangeRate = loadExchangeRate();
+  if(document.activeElement !== selExchangeRate){
+    selExchangeRate.value = exchangeRate;
+  }
+  const aimSet = ctx.useSetChange ? AIM_LINES.reset[exchangeRate] : AIM_LINES.normal[exchangeRate];
+  const aimLineList = document.getElementById('aimLineList');
+  const aimRows = [];
+  if(aimSet.plus != null){
+    const met = currentG >= aimSet.plus;
+    aimRows.push(`<div class="benefit-row${met ? ' met' : ''}"><span class="benefit-icon">${met ? '✅' : '⬜'}</span><span class="benefit-text">プラス域: ${aimSet.plus}あべし〜</span></div>`);
+  }
+  const aimMet = currentG >= aimSet.aim;
+  aimRows.push(`<div class="benefit-row${aimMet ? ' met' : ''}"><span class="benefit-icon">${aimMet ? '✅' : '⬜'}</span><span class="benefit-text">推奨狙い目: ${aimSet.aim}あべし〜</span></div>`);
+  aimLineList.innerHTML = aimRows.join('');
 
   document.getElementById('tanpatsuCount').textContent = loadTanpatsu();
 
@@ -1154,6 +1209,11 @@ document.getElementById('btnTotalGRegister').addEventListener('click', () => {
 
 document.getElementById('chkShoubuDamashii').addEventListener('change', (e) => {
   saveShoubu(e.target.checked);
+  render();
+});
+
+document.getElementById('selExchangeRate').addEventListener('change', (e) => {
+  saveExchangeRate(e.target.value);
   render();
 });
 
