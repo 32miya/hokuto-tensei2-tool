@@ -251,10 +251,14 @@
 
   <div class="card">
     <h2>⑦ 設定判別（AT初当たり確率ベース）</h2>
+    <div class="row">
+      <input type="number" id="inputTotalG" inputmode="numeric" placeholder="台の累計ゲーム数（未入力なら自動計算）" min="0">
+    </div>
+    <div class="hint">実機の台に表示されている、リセットされない累計ゲーム数（G数カウンター）を入力してください。空欄の場合は①のあべし履歴から概算します。</div>
     <div class="hist-stats" id="settingStats"></div>
     <div class="setting-list" id="settingList"></div>
     <div id="settingBestTag"></div>
-    <div class="hint">総ゲーム数（履歴合計＋現在のゲーム数）とAT当選回数から実戦のAT初当たり確率を計算し、公表されている設定1〜6のAT初当たり確率（1/366.0〜1/273.1）とどれだけ近いかをベイズ推定しています。設定6ずつの事前確率は均等と仮定した簡易推定で、サンプル数が少ないと大きくブレます（目安として1000G・当選3回以上が最低ライン）。他の設定差要素（あべし振り分けそのものは設定1データのみ）と併せて参考にしてください。</div>
+    <div class="hint">総ゲーム数とAT当選回数（履歴件数）から実戦のAT初当たり確率を計算し、公表されている設定1〜6のAT初当たり確率（1/366.0〜1/273.1）とどれだけ近いかをベイズ推定しています。設定6段階の事前確率は均等と仮定した簡易推定で、サンプル数が少ないと大きくブレます（目安として1000G・当選3回以上が最低ライン）。他の設定差要素（あべし振り分けそのものは設定1データのみ）と併せて参考にしてください。</div>
   </div>
 
   <div class="card counter-card">
@@ -326,6 +330,7 @@ const STORAGE_KEY_CURRENT = 'hokuto_tensei2_current_g_v1';
 const STORAGE_KEY_SETCHANGE = 'hokuto_tensei2_setchange_v1';
 const STORAGE_KEY_TANPATSU = 'hokuto_tensei2_tanpatsu_v1';
 const STORAGE_KEY_OMEN = 'hokuto_tensei2_omen_v1';
+const STORAGE_KEY_TOTALG = 'hokuto_tensei2_total_g_v1';
 
 function activeData(){
   const useSetChange = loadSetChange();
@@ -395,6 +400,15 @@ function loadOmen(){
 function saveOmen(v){
   if(v === null){ localStorage.removeItem(STORAGE_KEY_OMEN); }
   else { localStorage.setItem(STORAGE_KEY_OMEN, JSON.stringify(v)); }
+}
+function loadTotalG(){
+  const raw = localStorage.getItem(STORAGE_KEY_TOTALG);
+  const g = parseInt(raw, 10);
+  return Number.isFinite(g) && g > 0 ? g : null;
+}
+function saveTotalG(g){
+  if(g === null){ localStorage.removeItem(STORAGE_KEY_TOTALG); }
+  else { localStorage.setItem(STORAGE_KEY_TOTALG, String(g)); }
 }
 
 // 現在のゲーム数までまだ当選していない、という条件付き確率（生存確率）でモードを推定する。
@@ -627,7 +641,13 @@ function render(){
   }
   renderChart(history);
 
-  const totalGames = history.reduce((sum, e) => sum + e.g, 0) + currentG;
+  const inputTotalG = document.getElementById('inputTotalG');
+  const manualTotalG = loadTotalG();
+  if(document.activeElement !== inputTotalG){
+    inputTotalG.value = manualTotalG || '';
+  }
+  const estimatedTotalG = history.reduce((sum, e) => sum + e.g, 0) + currentG;
+  const totalGames = manualTotalG || estimatedTotalG;
   const hitCount = history.length;
   const settingStats = document.getElementById('settingStats');
   const settingList = document.getElementById('settingList');
@@ -639,7 +659,7 @@ function render(){
   } else {
     const observedDenom = totalGames / hitCount;
     settingStats.innerHTML = `
-      <div>総G数<b>${totalGames}G</b></div>
+      <div>総G数<b>${totalGames}G</b><br><span style="font-size:0.65rem;">${manualTotalG ? '入力値' : '履歴から概算'}</span></div>
       <div>当選回数<b>${hitCount}回</b></div>
       <div>実戦値<b>1/${observedDenom.toFixed(1)}</b></div>
     `;
@@ -766,6 +786,12 @@ document.getElementById('chkSettingChange').addEventListener('change', (e) => {
   render();
 });
 
+document.getElementById('inputTotalG').addEventListener('input', (e) => {
+  const g = parseInt(e.target.value, 10);
+  saveTotalG(Number.isFinite(g) && g > 0 ? g : null);
+  render();
+});
+
 document.getElementById('btnRegister').addEventListener('click', () => {
   const currentG = loadCurrentG();
   if(currentG < 1){ inputCurrentG.focus(); return; }
@@ -808,6 +834,7 @@ document.getElementById('btnClear').addEventListener('click', () => {
   localStorage.removeItem(STORAGE_KEY_SETCHANGE);
   localStorage.removeItem(STORAGE_KEY_TANPATSU);
   localStorage.removeItem(STORAGE_KEY_OMEN);
+  localStorage.removeItem(STORAGE_KEY_TOTALG);
   render();
 });
 
