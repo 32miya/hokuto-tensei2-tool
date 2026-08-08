@@ -191,6 +191,11 @@
     <div class="warn" id="outOfRangeWarn" style="display:none;">
       ⚠ 想定データ範囲を超えています。参考値は均等表示になります。
     </div>
+    <div class="row" style="margin-top:14px;">
+      <input type="number" id="inputTotalGQuick" inputmode="numeric" placeholder="現在のG数（台の累計・リセットなし）" min="0">
+      <button class="btn-sub" id="btnTotalGRegister" style="flex:0 0 auto;">登録</button>
+    </div>
+    <div class="hint">実機のG数カウンター（あべしとは別の、リセットされない累計値）です。登録すると⑦設定判別に使われます。</div>
     <label class="toggle-row">
       <input type="checkbox" id="chkSettingChange">
       本日の1G目から打っている（設定変更の可能性あり・天井短縮）
@@ -642,9 +647,13 @@ function render(){
   renderChart(history);
 
   const inputTotalG = document.getElementById('inputTotalG');
+  const inputTotalGQuick = document.getElementById('inputTotalGQuick');
   const manualTotalG = loadTotalG();
   if(document.activeElement !== inputTotalG){
     inputTotalG.value = manualTotalG || '';
+  }
+  if(document.activeElement !== inputTotalGQuick){
+    inputTotalGQuick.value = manualTotalG || '';
   }
   const estimatedTotalG = history.reduce((sum, e) => sum + e.g, 0) + currentG;
   const totalGames = manualTotalG || estimatedTotalG;
@@ -788,6 +797,12 @@ document.getElementById('chkSettingChange').addEventListener('change', (e) => {
 
 document.getElementById('inputTotalG').addEventListener('input', (e) => {
   const g = parseInt(e.target.value, 10);
+  saveTotalG(Number.isFinite(g) && g > 0 ? g : null);
+  render();
+});
+
+document.getElementById('btnTotalGRegister').addEventListener('click', () => {
+  const g = parseInt(document.getElementById('inputTotalGQuick').value, 10);
   saveTotalG(Number.isFinite(g) && g > 0 ? g : null);
   render();
 });
