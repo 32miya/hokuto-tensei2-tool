@@ -207,7 +207,7 @@
       <input type="number" id="inputTotalG" inputmode="numeric" placeholder="現在のG数（台の累計・リセットなし）" min="0">
       <button class="btn-sub" id="btnTotalGRegister" style="flex:0 0 auto;">登録</button>
     </div>
-    <div class="hint">実機のG数カウンター（あべしとは別の、リセットされない累計値）です。登録すると⑦設定判別に使われます。</div>
+    <div class="hint" id="totalGStatus">実機のG数カウンター（あべしとは別の、リセットされない累計値）です。登録すると⑦設定判別に使われます。</div>
     <label class="toggle-row">
       <input type="checkbox" id="chkSettingChange">
       本日の1G目から打っている（設定変更の可能性あり・天井短縮）
@@ -686,6 +686,9 @@ function render(){
   if(document.activeElement !== inputTotalG){
     inputTotalG.value = manualTotalG || '';
   }
+  document.getElementById('totalGStatus').textContent = manualTotalG
+    ? `✓ 登録済み: ${manualTotalG}G（⑦設定判別で使用中）`
+    : '実機のG数カウンター（あべしとは別の、リセットされない累計値）です。登録すると⑦設定判別に使われます。';
   const estimatedTotalG = history.reduce((sum, e) => sum + e.g, 0) + currentG;
   const totalGames = manualTotalG || estimatedTotalG;
   const hitCount = history.length;
@@ -693,7 +696,7 @@ function render(){
   const settingList = document.getElementById('settingList');
   const settingBestTag = document.getElementById('settingBestTag');
   if(hitCount === 0){
-    settingStats.innerHTML = '';
+    settingStats.innerHTML = manualTotalG ? `<div>総G数<b>${manualTotalG}G</b><br><span style="font-size:0.65rem;">入力値（登録済み）</span></div>` : '';
     settingList.innerHTML = '<div class="empty">あべし成立を1回以上記録すると判別を開始します</div>';
     settingBestTag.innerHTML = '';
     document.getElementById('qsSetting').textContent = 'データ不足';
