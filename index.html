@@ -176,6 +176,13 @@
   .qs-value.green{color:#7fd68a;}
   .qs-value.yellow{color:var(--gold);}
   .qs-value.red{color:var(--red);}
+
+  .benefit-list{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+  .benefit-row{display:flex;align-items:center;gap:8px;font-size:0.78rem;color:var(--sub);}
+  .benefit-row.met{color:var(--text);}
+  .benefit-icon{font-size:1rem;flex-shrink:0;width:20px;text-align:center;}
+  .benefit-manual{cursor:pointer;}
+  .benefit-manual input{width:16px;height:16px;flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -242,6 +249,22 @@
     </div>
     <div class="progress-bar-bg"><div class="progress-bar-fill" id="tenjouBar" style="width:0%"></div></div>
     <div class="tenjou-sub" id="tenjouSub"></div>
+
+    <div class="benefit-list">
+      <div class="benefit-row" id="benefitRow1">
+        <span class="benefit-icon" id="benefitIcon1">⬜</span>
+        <span class="benefit-text">規定あべし（天井）に到達 → AT当選確定</span>
+      </div>
+      <div class="benefit-row" id="benefitRow2">
+        <span class="benefit-icon" id="benefitIcon2">⬜</span>
+        <span class="benefit-text">1473あべしを超えて当選（直撃でもWIN表示時点で超えていればOK）→ ATレベル3以上濃厚</span>
+      </div>
+      <label class="benefit-row benefit-manual">
+        <input type="checkbox" id="chkShoubuDamashii">
+        <span class="benefit-text">勝舞魂を2個保有した状態でAT開始（参考情報・確度はやや低め）</span>
+      </label>
+    </div>
+    <div class="hint">上2つは現在のゲーム数から自動判定。勝舞魂の保有数はAT開始画面で確認して手動チェックしてください。</div>
   </div>
 
   <div class="card">
@@ -324,7 +347,8 @@
     データ出典: <a href="https://p-town.dmm.com/machines/4909" target="_blank" rel="noopener">p-town.dmm.com</a>（規定あべし振り分け・設定1）、
     <a href="https://nana-press.com/kaiseki/machine/1059/33039/" target="_blank" rel="noopener">nana-press.com</a>（モード移行率・設定差）、
     <a href="https://note.com/norihey_01/n/ne90cfaa4f7d9" target="_blank" rel="noopener">note.com/norihey_01</a>（ゾーン外プレ前兆）、
-    <a href="https://1geki.jp/slot/l_hokuto_tensei2/0/" target="_blank" rel="noopener">1geki.jp</a>（AT初当たり確率・設定1〜6）
+    <a href="https://1geki.jp/slot/l_hokuto_tensei2/0/" target="_blank" rel="noopener">1geki.jp</a>（AT初当たり確率・設定1〜6）、
+    <a href="https://nana-press.com/kaiseki/machine/1059/33018/" target="_blank" rel="noopener">nana-press.com</a>（天井恩恵・発動条件）
   </footer>
 </div>
 
@@ -366,6 +390,7 @@ const STORAGE_KEY_SETCHANGE = 'hokuto_tensei2_setchange_v1';
 const STORAGE_KEY_TANPATSU = 'hokuto_tensei2_tanpatsu_v1';
 const STORAGE_KEY_OMEN = 'hokuto_tensei2_omen_v1';
 const STORAGE_KEY_TOTALG = 'hokuto_tensei2_total_g_v1';
+const STORAGE_KEY_SHOUBU = 'hokuto_tensei2_shoubu_v1';
 
 function activeData(){
   const useSetChange = loadSetChange();
@@ -444,6 +469,13 @@ function loadTotalG(){
 function saveTotalG(g){
   if(g === null){ localStorage.removeItem(STORAGE_KEY_TOTALG); }
   else { localStorage.setItem(STORAGE_KEY_TOTALG, String(g)); }
+}
+function loadShoubu(){
+  return localStorage.getItem(STORAGE_KEY_SHOUBU) === '1';
+}
+function saveShoubu(on){
+  if(on){ localStorage.setItem(STORAGE_KEY_SHOUBU, '1'); }
+  else { localStorage.removeItem(STORAGE_KEY_SHOUBU); }
 }
 
 // 現在のゲーム数までまだ当選していない、という条件付き確率（生存確率）でモードを推定する。
@@ -555,12 +587,29 @@ function render(){
   document.getElementById('tenjouRemain').textContent = remain;
   const progressPct = Math.min(100, (currentG / ctx.tenjouG) * 100);
   document.getElementById('tenjouBar').style.width = progressPct + '%';
-  const tenjouSubParts = [`天井: ${ctx.tenjouG}G（${ctx.useSetChange ? '設定変更後の短縮天井' : '通常'}）`];
-  if(!ctx.useSetChange && currentG > 1473){
-    tenjouSubParts.push('1473G超えでの当選 → ATレベル3以上濃厚');
-  }
-  document.getElementById('tenjouSub').innerHTML = tenjouSubParts.join('<br>');
+  document.getElementById('tenjouSub').textContent = `天井: ${ctx.tenjouG}G（${ctx.useSetChange ? '設定変更後の短縮天井' : '通常'}）`;
   document.getElementById('qsTenjou').textContent = `${remain}G`;
+
+  const benefit1Met = currentG >= ctx.tenjouG;
+  const benefitRow1 = document.getElementById('benefitRow1');
+  benefitRow1.classList.toggle('met', benefit1Met);
+  document.getElementById('benefitIcon1').textContent = benefit1Met ? '✅' : '⬜';
+
+  const benefitRow2 = document.getElementById('benefitRow2');
+  const benefitIcon2 = document.getElementById('benefitIcon2');
+  if(ctx.useSetChange){
+    benefitRow2.classList.remove('met');
+    benefitIcon2.textContent = '➖';
+  } else {
+    const benefit2Met = currentG > 1473;
+    benefitRow2.classList.toggle('met', benefit2Met);
+    benefitIcon2.textContent = benefit2Met ? '✅' : '⬜';
+  }
+
+  const chkShoubuDamashii = document.getElementById('chkShoubuDamashii');
+  if(document.activeElement !== chkShoubuDamashii){
+    chkShoubuDamashii.checked = loadShoubu();
+  }
 
   document.getElementById('tanpatsuCount').textContent = loadTanpatsu();
 
@@ -838,6 +887,11 @@ document.getElementById('btnTotalGRegister').addEventListener('click', () => {
   render();
 });
 
+document.getElementById('chkShoubuDamashii').addEventListener('change', (e) => {
+  saveShoubu(e.target.checked);
+  render();
+});
+
 document.getElementById('btnRegister').addEventListener('click', () => {
   const currentG = loadCurrentG();
   if(currentG < 1){ inputCurrentG.focus(); return; }
@@ -847,6 +901,7 @@ document.getElementById('btnRegister').addEventListener('click', () => {
   saveCurrentG(0);
   saveTanpatsu(0);
   saveOmen(null);
+  saveShoubu(false);
   render();
 });
 
@@ -881,6 +936,7 @@ document.getElementById('btnClear').addEventListener('click', () => {
   localStorage.removeItem(STORAGE_KEY_TANPATSU);
   localStorage.removeItem(STORAGE_KEY_OMEN);
   localStorage.removeItem(STORAGE_KEY_TOTALG);
+  localStorage.removeItem(STORAGE_KEY_SHOUBU);
   render();
 });
 
