@@ -322,6 +322,7 @@
     </div>
     <div class="hint">通常A（当たりまで最も長引くモード）である確率を「やめ時確率」の目安として表示しています。100%に近いほど長期化しやすい状態です。⑥のゾーン外プレ前兆の判定があれば、そちらを優先して反映します。</div>
     <div class="hint" id="yameExpected"></div>
+    <div class="best-tag" id="nextHotRange" style="margin-top:10px;display:block;"></div>
     <div class="row" style="margin-top:12px;">
       <input type="number" id="inputBalance" placeholder="現在の差枚数（マイナスも入力可）">
     </div>
@@ -855,9 +856,18 @@ function render(){
     `期待当選までの追加投資目安: 約${investToExpected}枚（${COST_PER_GAME}枚/G想定）<br>` +
     `天井到達までの追加投資目安（最大）: 約${investToTenjou}枚`;
 
+  const preds = predictTop3Live(live, ctx);
+  const nextHotRange = document.getElementById('nextHotRange');
+  if(preds.length === 0){
+    nextHotRange.innerHTML = '';
+  } else {
+    const top = preds[0];
+    nextHotRange.innerHTML =
+      `次に当選しやすいのは <b>${rangeLabel(top.i)}</b>（${(top.v * 100).toFixed(1)}%）です。ここを過ぎても当選しなければ、やめ時がより近づきます。`;
+  }
+
   const predList = document.getElementById('predList');
   predList.innerHTML = '';
-  const preds = predictTop3Live(live, ctx);
   if(preds.length === 0){
     predList.innerHTML = '<div class="empty">算出できるレンジがありません</div>';
   } else {
