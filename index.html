@@ -149,6 +149,16 @@
   .counter-display{font-size:2.4rem;font-weight:700;color:var(--red);margin:4px 0 12px;font-variant-numeric:tabular-nums;}
   .counter-row{display:flex;gap:8px;}
   .counter-row button{flex:1;}
+
+  .yame-main{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;}
+  .yame-badge{
+    font-size:0.95rem;font-weight:700;padding:8px 14px;border-radius:10px;
+    border:1px solid var(--line);background:#0e0506;
+  }
+  .yame-badge.green{color:#7fd68a;border-color:#3a5a3f;}
+  .yame-badge.yellow{color:var(--gold);border-color:#6a5323;}
+  .yame-badge.red{color:var(--red);border-color:var(--red-dark);}
+  .yame-pct{font-size:2rem;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;}
 </style>
 </head>
 <body>
@@ -168,7 +178,7 @@
       <input type="number" id="inputCurrentG" inputmode="numeric" placeholder="0" min="0">
       <button class="btn-step" id="btnPlus">＋1</button>
     </div>
-    <div class="hint">まだ当選していない現在のゲーム数を入力・更新すると、②③④がリアルタイムで再計算されます。</div>
+    <div class="hint">まだ当選していない現在のゲーム数を入力・更新すると、②③④⑤がリアルタイムで再計算されます。</div>
     <div class="row" style="margin-top:10px;">
       <button class="btn-gold" id="btnRegister" style="flex:1;">🎯 あべし成立！記録してリセット</button>
     </div>
@@ -199,13 +209,23 @@
   </div>
 
   <div class="card">
-    <h2>④ 次あべし当選ゲーム数（有力レンジ TOP3）</h2>
+    <h2>④ やめ時サイン</h2>
+    <div class="yame-main">
+      <div class="yame-badge" id="yameBadge">-</div>
+      <div class="yame-pct" id="yamePct">--%</div>
+    </div>
+    <div class="hint">通常A（当たりまで最も長引くモード）である確率を「やめ時確率」の目安として表示しています。100%に近いほど長期化しやすい状態です。⑥のゾーン外プレ前兆の判定があれば、そちらを優先して反映します。</div>
+    <div class="hint" id="yameExpected"></div>
+  </div>
+
+  <div class="card">
+    <h2>⑤ 次あべし当選ゲーム数（有力レンジ TOP3）</h2>
     <div class="pred-list" id="predList"></div>
     <div class="hint">現在のゲーム数より後のレンジのみを対象に、③の推定状態を踏まえて算出しています。</div>
   </div>
 
   <div class="card">
-    <h2>⑤ ゾーン外プレ前兆チェック</h2>
+    <h2>⑥ ゾーン外プレ前兆チェック</h2>
     <div class="hint">37〜48G・166〜173G・288〜300G・421〜429G・489〜495Gの5区間で、レア役を引いていないのに前兆演出が出た場合は「896G以内当選濃厚（モードB以上）」の目安になります。①のゲーム数がこの区間に入ると下に確認ボタンが表示されます。</div>
     <div id="zonePanel"></div>
     <div class="best-tag" id="omenAdvice" style="display:none;margin-top:10px;"></div>
@@ -214,7 +234,7 @@
   <details class="card" style="margin-bottom:14px;">
     <summary>各モードの規定あべし上限・データ出典について</summary>
     <p>通常A＝〜1536G／通常B＝〜896G／通常C＝〜576G／天国＝〜128Gが規定あべしの上限です（この範囲を超えて未当選なら、そのモードである可能性はほぼ消えます）。</p>
-    <p>②③の推定には、あべし成立時の「次モード移行率」（設定1・通常時：A51.9% B23.7% C17.6% 天国6.8% ／ 設定変更時：A49.3% B22.0% C20.1% 天国8.6%）を新しい区間の初期確率として使用しています。ゾーン外プレ前兆の判定は攻略サイトの経験則に基づく目安で、②③の数値計算には含めていません。</p>
+    <p>③④⑤の推定には、あべし成立時の「次モード移行率」（設定1・通常時：A51.9% B23.7% C17.6% 天国6.8% ／ 設定変更時：A49.3% B22.0% C20.1% 天国8.6%）を新しい区間の初期確率として使用しています。⑥ゾーン外プレ前兆の判定は攻略サイトの経験則に基づく目安で、③④⑤の数値計算には含めていません（⑥で判定を記録した場合、④の表示にのみ目安として反映します）。</p>
     <p style="color:var(--sub);">当初ご指定の「37〜38G・43〜45GでモードC示唆」は、調査の結果おそらくこの37〜48G区間（モードA以外全般を示唆）の簡略版と考えられます。</p>
   </details>
 
@@ -225,7 +245,7 @@
   </details>
 
   <div class="card counter-card">
-    <h2 style="justify-content:center;">⑥ 単発ボーナス連続カウント</h2>
+    <h2 style="justify-content:center;">⑦ 単発ボーナス連続カウント</h2>
     <div class="counter-display" id="tanpatsuCount">0</div>
     <div class="counter-row">
       <button class="btn-sub" id="btnTanpatsuMinus">−1</button>
@@ -389,7 +409,8 @@ function computeLive(currentG, ctx){
   return {idx, remainFrac, survival, post, outOfRange};
 }
 
-function predictTop3Live(live, ctx){
+// 現在のバケット以降について、モード混合済みの「次のあべしがこのバケットに来る条件付き確率」を返す。
+function buildMix(live, ctx){
   const {data, bucketCount} = ctx;
   const {idx, remainFrac, survival, post} = live;
   const mix = new Array(bucketCount).fill(0);
@@ -400,11 +421,29 @@ function predictTop3Live(live, ctx){
       mix[i] += post[m] * (raw / survival[m]);
     }
   }
+  return mix;
+}
+
+function predictTop3Live(live, ctx){
+  const mix = buildMix(live, ctx);
   return mix
     .map((v, i) => ({i, v}))
-    .filter(p => p.i >= idx && p.v > 0)
+    .filter(p => p.i >= live.idx && p.v > 0)
     .sort((a, b) => b.v - a.v)
     .slice(0, 3);
+}
+
+// 続行した場合の「あと何ゲームで当たるか」の期待値（各64G区間内は一様分布と仮定した近似）。
+function expectedRemaining(live, ctx, currentG){
+  const mix = buildMix(live, ctx);
+  let exp = 0;
+  for(let i = live.idx; i < ctx.bucketCount; i++){
+    if(mix[i] <= 0) continue;
+    const bucketTop = (i + 1) * 64;
+    const midG = (i === live.idx) ? (currentG + bucketTop) / 2 : (i * 64 + 32.5);
+    exp += mix[i] * Math.max(0, midG - currentG);
+  }
+  return exp;
 }
 
 function render(){
@@ -481,6 +520,30 @@ function render(){
   }
   document.getElementById('bestTag').innerHTML =
     `<span class="best-tag">現在の推定：${MODE_LABEL[bestMode]}（${(bestVal * 100).toFixed(1)}%）</span>`;
+
+  const yamePctVal = live.post.A;
+  const pastZone1 = currentG >= ZONES[0].min;
+  const yameBadge = document.getElementById('yameBadge');
+  let yameLabel, yameColor;
+  if(omen && omen.result === 'B+'){
+    yameLabel = '続行推奨（前兆ありで否定）';
+    yameColor = 'green';
+  } else if(yamePctVal >= 0.80 && pastZone1){
+    yameLabel = 'やめ時濃厚';
+    yameColor = 'red';
+  } else if(yamePctVal >= 0.55){
+    yameLabel = '様子見';
+    yameColor = 'yellow';
+  } else {
+    yameLabel = '続行推奨';
+    yameColor = 'green';
+  }
+  yameBadge.textContent = (yameColor === 'red' ? '🔴 ' : yameColor === 'yellow' ? '🟡 ' : '🟢 ') + yameLabel;
+  yameBadge.className = 'yame-badge ' + yameColor;
+  document.getElementById('yamePct').textContent = (yamePctVal * 100).toFixed(1) + '%';
+  const expG = expectedRemaining(live, ctx, currentG);
+  document.getElementById('yameExpected').textContent =
+    `続行した場合の残り期待ゲーム数の目安: 約${Math.round(expG)}G（攻略サイト情報では、⑥第1区間48G付近でノーヒットの場合のヤメ目安として期待値104〜105%程度という情報もあります）`;
 
   const predList = document.getElementById('predList');
   predList.innerHTML = '';
