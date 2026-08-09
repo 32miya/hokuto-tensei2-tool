@@ -56,13 +56,14 @@
     text-align:center;
   }
   input[type=number]:focus{outline:2px solid var(--red);}
-  button{
+  button, a.btn-sub, a.btn-gold, a.btn-main{
     border:none;border-radius:10px;
     font-size:0.95rem;font-weight:700;
     padding:12px 16px;cursor:pointer;
     transition:transform 0.1s ease, opacity 0.15s ease;
+    box-sizing:border-box;
   }
-  button:active{transform:scale(0.96);}
+  button:active, a.btn-sub:active, a.btn-gold:active, a.btn-main:active{transform:scale(0.96);}
   .btn-main{background:linear-gradient(180deg,var(--red),var(--red-dark));color:#fff;}
   .btn-gold{background:linear-gradient(180deg,var(--gold),#a5761f);color:#241014;}
   .btn-sub{background:#2a1518;color:var(--sub);border:1px solid var(--line);}
@@ -454,7 +455,8 @@
     </div>
     <div class="empty" id="chartEmptyHint" style="display:none;">データが2件以上たまるとグラフが表示されます</div>
     <div class="hist-log" id="historyList"><div class="empty">まだデータがありません</div></div>
-    <button class="btn-danger" id="btnClear">🔄 台移動・データを全クリア</button>
+    <a href="history.html" class="btn-sub" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px;">📊 過去のセッション・実績レポートを見る</a>
+    <button class="btn-danger" id="btnClear">🔄 台移動・データを全クリア（今回の記録は自動保存されます）</button>
   </div>
 
   <footer>
@@ -579,6 +581,7 @@ const STORAGE_KEY_EXCHANGE = 'hokuto_tensei2_exchange_v1';
 const STORAGE_KEY_BALANCE = 'hokuto_tensei2_balance_v1';
 const STORAGE_KEY_INVESTMENT = 'hokuto_tensei2_investment_v1';
 const STORAGE_KEY_KOYAKU = 'hokuto_tensei2_koyaku_v1';
+const STORAGE_KEY_SESSIONS = 'hokuto_tensei2_sessions_v1';
 const STORAGE_KEY_TENPA = 'hokuto_tensei2_tenpa_count_v1';
 const COST_PER_GAME = 3; // 1Gあたりの消化枚数（通常3枚/G想定）
 const BALANCE_DANGER = -1500; // この差枚数を下回るとモード確率が高くなくても「やめ時濃厚」寄りに
@@ -697,6 +700,56 @@ function calibrateKoyakuToHoldings(targetHoldings){
   const totalG = manualTotalG || estimatedTotalG;
   const neededKoyaku = targetHoldings - loadInvestment() - totalPayout + totalG * COST_PER_GAME;
   localStorage.setItem(STORAGE_KEY_KOYAKU, String(neededKoyaku));
+}
+function loadSessions(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY_SESSIONS);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+function saveSessions(sessions){
+  localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(sessions));
+}
+// 台移動でデータをクリアする前に、今回のセッションの実績をアーカイブへ保存する。
+function archiveSession(){
+  const history = loadHistory();
+  const currentG = loadCurrentG();
+  if(history.length === 0 && currentG === 0) return; // 記録するものがなければ何もしない
+
+  const totalPayout = history.reduce((s, e) => s + (e.payout || 0), 0);
+  const manualTotalG = loadTotalG();
+  const estimatedTotalG = history.reduce((s, e) => s + e.g, 0) + currentG;
+  const totalG = manualTotalG || estimatedTotalG;
+  const hitCount = history.length;
+  const tenpaCount = loadTenpaCount();
+
+  let bestSetting = null, bestSettingPct = null;
+  if(totalG > 0 && (hitCount > 0 || tenpaCount > 0)){
+    const atLogL = settingLogLikelihood(totalG, hitCount, AT_RATE_DENOM);
+    const tenpaLogL = settingLogLikelihood(totalG, tenpaCount, TENPA_RATE_DENOM);
+    const combined = normalizeLogLikelihoods(atLogL.map((v, i) => v + tenpaLogL[i]));
+    let bestI = 0;
+    combined.forEach((p, i) => { if(p > combined[bestI]) bestI = i; });
+    bestSetting = bestI + 1;
+    bestSettingPct = combined[bestI];
+  }
+
+  const sessions = loadSessions();
+  sessions.push({
+    id: Date.now(),
+    date: Date.now(),
+    history,
+    totalG,
+    hitCount,
+    tenpaCount,
+    totalPayout,
+    investment: loadInvestment(),
+    koyaku: loadKoyaku(),
+    balance: loadBalance(),
+    bestSetting,
+    bestSettingPct
+  });
+  saveSessions(sessions);
 }
 function loadShoubu(){
   return localStorage.getItem(STORAGE_KEY_SHOUBU) === '1';
@@ -1360,7 +1413,8 @@ document.getElementById('historyList').addEventListener('change', (e) => {
 });
 
 document.getElementById('btnClear').addEventListener('click', () => {
-  if(!confirm('台移動しますか？累積データを全て消去します。')) return;
+  if(!confirm('台移動しますか？今回の記録をレポートに保存してから、入力データをクリアします。')) return;
+  archiveSession();
   localStorage.removeItem(STORAGE_KEY_HISTORY);
   localStorage.removeItem(STORAGE_KEY_CURRENT);
   localStorage.removeItem(STORAGE_KEY_SETCHANGE);

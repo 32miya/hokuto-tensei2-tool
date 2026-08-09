@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>北斗の拳 転生の章2 実績レポート</title>
+<style>
+  :root{
+    --bg:#120608;
+    --panel:#1c0d10;
+    --panel2:#241014;
+    --red:#e2312a;
+    --red-dark:#8f1c17;
+    --gold:#e0a83c;
+    --text:#f2e6e2;
+    --sub:#b58e88;
+    --line:#3a1e1f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:radial-gradient(ellipse at top, #2a1013 0%, #120608 60%);
+    color:var(--text);
+    font-family:"Hiragino Sans","Yu Gothic",system-ui,-apple-system,sans-serif;
+    min-height:100vh;
+    padding:16px 12px 60px;
+  }
+  .wrap{max-width:560px;margin:0 auto;}
+  header{text-align:center;margin-bottom:14px;}
+  header h1{
+    font-size:1.25rem;margin:0 0 4px;
+    color:var(--gold);letter-spacing:0.03em;
+    text-shadow:0 0 10px rgba(224,168,60,0.35);
+  }
+  header .note{font-size:0.72rem;color:var(--sub);line-height:1.5;}
+  a.back-link{
+    display:inline-block;margin-bottom:10px;color:var(--sub);
+    font-size:0.8rem;text-decoration:none;border:1px solid var(--line);
+    border-radius:8px;padding:6px 12px;
+  }
+  .card{
+    background:linear-gradient(180deg,var(--panel2),var(--panel));
+    border:1px solid var(--line);border-radius:14px;
+    padding:14px;margin-bottom:14px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.35);
+  }
+  .card h2{font-size:0.9rem;margin:0 0 10px;color:var(--red);}
+  .empty{color:var(--sub);font-size:0.85rem;text-align:center;padding:20px 0;}
+
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .summary-tile{
+    background:#0e0506;border:1px solid var(--line);border-radius:10px;
+    padding:10px;text-align:center;
+  }
+  .summary-tile .label{font-size:0.68rem;color:var(--sub);margin-bottom:4px;}
+  .summary-tile .value{font-size:1.15rem;font-weight:700;color:var(--text);}
+  .summary-tile .value.pos{color:#7fd68a;}
+  .summary-tile .value.neg{color:var(--red);}
+
+  .chart-card{position:relative;margin-bottom:4px;}
+  .chart-card svg{width:100%;height:auto;aspect-ratio:320/150;display:block;touch-action:none;cursor:crosshair;}
+  .chart-tooltip{
+    position:absolute;pointer-events:none;display:none;
+    background:#0e0506;border:1px solid var(--gold);border-radius:8px;
+    padding:6px 10px;font-size:0.72rem;color:var(--sub);line-height:1.5;
+    transform:translate(-50%,-115%);white-space:nowrap;z-index:2;
+  }
+  .chart-tooltip b{color:var(--gold);font-size:0.95rem;}
+
+  .session-list{display:flex;flex-direction:column;gap:10px;}
+  .session-card{
+    background:#0e0506;border:1px solid var(--line);border-radius:10px;
+    padding:12px;
+  }
+  .session-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+  .session-date{font-size:0.8rem;color:var(--sub);}
+  .session-balance{font-size:1.2rem;font-weight:700;}
+  .session-balance.pos{color:#7fd68a;}
+  .session-balance.neg{color:var(--red);}
+  .session-stats{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:6px;
+    font-size:0.75rem;color:var(--sub);margin-bottom:8px;
+  }
+  .session-stats b{display:block;color:var(--text);font-size:0.85rem;}
+  .session-eval{font-size:0.78rem;color:var(--gold);margin-bottom:8px;line-height:1.6;}
+  .session-del{
+    background:transparent;border:1px solid var(--red-dark);color:var(--red);
+    border-radius:8px;padding:6px 12px;font-size:0.75rem;cursor:pointer;
+  }
+
+  .btn-danger{
+    background:transparent;color:var(--red);border:1px solid var(--red-dark);
+    width:100%;padding:12px 16px;border-radius:10px;font-size:0.9rem;
+    font-weight:700;cursor:pointer;margin-top:6px;
+  }
+  footer{text-align:center;font-size:0.68rem;color:#6b4d49;margin-top:18px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="index.html" class="back-link">← ツールに戻る</a>
+  <header>
+    <h1>実績レポート・プレイ履歴</h1>
+    <div class="note">台移動時に自動保存されたセッションの記録です。ブラウザのlocalStorageに保存されており、この端末・このサイトでのみ閲覧できます。</div>
+  </header>
+
+  <div class="card" id="summaryCard">
+    <h2>通算サマリー</h2>
+    <div class="summary-grid" id="summaryGrid"></div>
+  </div>
+
+  <div class="card" id="chartCardWrap" style="display:none;">
+    <h2>セッションごとの差枚数推移</h2>
+    <div class="chart-card">
+      <svg id="sessionChart" viewBox="0 0 320 150"></svg>
+      <div class="chart-tooltip" id="sessionTooltip"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>セッション一覧（新しい順）</h2>
+    <div class="session-list" id="sessionList"></div>
+  </div>
+
+  <button class="btn-danger" id="btnClearAll">🗑 全セッションデータを削除</button>
+
+  <footer>この端末のブラウザに保存されたローカルデータです。外部に送信・共有はされません。</footer>
+</div>
+
+<script>
+const STORAGE_KEY_SESSIONS = 'hokuto_tensei2_sessions_v1';
+const AT_RATE_DENOM = [366.0, 357.0, 336.3, 298.7, 283.2, 273.1];
+
+function loadSessions(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY_SESSIONS);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+function saveSessions(sessions){
+  localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(sessions));
+}
+function formatDate(ts){
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function fmtSigned(n){
+  return (n >= 0 ? '+' : '') + n;
+}
+function evalSession(s){
+  const lines = [];
+  if(s.totalG > 0 && s.hitCount > 0){
+    const observed = s.totalG / s.hitCount;
+    const setting1 = AT_RATE_DENOM[0];
+    lines.push(`実戦AT確率 1/${observed.toFixed(1)}（公表設定1: 1/${setting1.toFixed(1)}）`);
+  }
+  if(s.bestSetting != null){
+    lines.push(`推定設定: 設定${s.bestSetting}（${(s.bestSettingPct * 100).toFixed(0)}%、⑦の判別結果）`);
+  }
+  return lines.join(' ／ ');
+}
+
+function render(){
+  const sessions = loadSessions();
+
+  const summaryGrid = document.getElementById('summaryGrid');
+  if(sessions.length === 0){
+    summaryGrid.innerHTML = '<div class="empty" style="grid-column:1/3;">まだ記録がありません。①のツールで台移動・データクリアを行うと、ここに実績が保存されます。</div>';
+  } else {
+    const totalSessions = sessions.length;
+    const totalG = sessions.reduce((s, x) => s + x.totalG, 0);
+    const totalBalance = sessions.reduce((s, x) => s + x.balance, 0);
+    const totalInvestment = sessions.reduce((s, x) => s + (x.investment || 0), 0);
+    const winCount = sessions.filter(x => x.balance > 0).length;
+    const winRate = (winCount / totalSessions * 100).toFixed(0);
+    const avgBalance = Math.round(totalBalance / totalSessions);
+    summaryGrid.innerHTML = `
+      <div class="summary-tile"><div class="label">総セッション数</div><div class="value">${totalSessions}回</div></div>
+      <div class="summary-tile"><div class="label">通算差枚</div><div class="value ${totalBalance >= 0 ? 'pos' : 'neg'}">${fmtSigned(totalBalance)}枚</div></div>
+      <div class="summary-tile"><div class="label">通算G数</div><div class="value">${totalG.toLocaleString()}G</div></div>
+      <div class="summary-tile"><div class="label">勝率（差枚プラス）</div><div class="value">${winRate}%</div></div>
+      <div class="summary-tile"><div class="label">平均差枚/セッション</div><div class="value ${avgBalance >= 0 ? 'pos' : 'neg'}">${fmtSigned(avgBalance)}枚</div></div>
+      <div class="summary-tile"><div class="label">総投資</div><div class="value">${totalInvestment.toLocaleString()}枚</div></div>
+    `;
+  }
+
+  const chartCardWrap = document.getElementById('chartCardWrap');
+  if(sessions.length >= 2){
+    chartCardWrap.style.display = 'block';
+    renderSessionChart(sessions);
+  } else {
+    chartCardWrap.style.display = 'none';
+  }
+
+  const sessionList = document.getElementById('sessionList');
+  if(sessions.length === 0){
+    sessionList.innerHTML = '<div class="empty">まだ記録がありません</div>';
+  } else {
+    sessionList.innerHTML = sessions.slice().reverse().map((s, i) => {
+      const idx = sessions.length - 1 - i;
+      const evalText = evalSession(s);
+      return `<div class="session-card">
+        <div class="session-head">
+          <span class="session-date">${formatDate(s.date)}</span>
+          <span class="session-balance ${s.balance >= 0 ? 'pos' : 'neg'}">${fmtSigned(s.balance)}枚</span>
+        </div>
+        <div class="session-stats">
+          <div>総G数<b>${s.totalG}G</b></div>
+          <div>当選回数<b>${s.hitCount}回</b></div>
+          <div>投資<b>${s.investment || 0}枚</b></div>
+        </div>
+        ${evalText ? `<div class="session-eval">${evalText}</div>` : ''}
+        <button class="session-del" data-idx="${idx}">このセッションを削除</button>
+      </div>`;
+    }).join('');
+  }
+}
+
+function renderSessionChart(sessions){
+  const W = 320, H = 150, padL = 36, padR = 10, padT = 12, padB = 20;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const n = sessions.length;
+  const values = sessions.map(s => s.balance);
+  const rawMax = Math.max(...values, 0);
+  const rawMin = Math.min(...values, 0);
+  const yMax = Math.max(100, Math.ceil(rawMax * 1.15 / 100) * 100);
+  const yMin = Math.min(-100, Math.floor(rawMin * 1.15 / 100) * 100);
+  const range = yMax - yMin;
+  const xAt = i => padL + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
+  const yAt = v => padT + (1 - (v - yMin) / range) * plotH;
+  const zeroY = yAt(0);
+
+  const parts = [];
+  [yMin, 0, yMax].forEach(gy => {
+    const y = yAt(gy);
+    parts.push(`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="${gy === 0 ? '#5a3a2f' : '#3a1e1f'}" stroke-width="1"/>`);
+    parts.push(`<text x="${padL - 5}" y="${(y + 3).toFixed(1)}" text-anchor="end" font-size="8" fill="#b58e88">${Math.round(gy)}</text>`);
+  });
+
+  const pathD = sessions.map((s, i) => `${i === 0 ? 'M' : 'L'}${xAt(i).toFixed(1)},${yAt(s.balance).toFixed(1)}`).join(' ');
+  parts.push(`<path d="${pathD}" fill="none" stroke="#e0a83c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`);
+
+  sessions.forEach((s, i) => {
+    const isLast = i === n - 1;
+    parts.push(`<circle cx="${xAt(i).toFixed(1)}" cy="${yAt(s.balance).toFixed(1)}" r="${isLast ? 5 : 3}" fill="${s.balance >= 0 ? '#7fd68a' : '#e2312a'}" ${isLast ? 'stroke="#1c0d10" stroke-width="2"' : ''}/>`);
+  });
+
+  parts.push(`<rect id="sessChartHitzone" x="${padL}" y="0" width="${plotW}" height="${H}" fill="transparent"/>`);
+  parts.push(`<line id="sessChartCrosshair" x1="0" y1="${padT}" x2="0" y2="${padT + plotH}" stroke="#b58e88" stroke-width="1" style="display:none;"/>`);
+
+  const svg = document.getElementById('sessionChart');
+  svg.innerHTML = parts.join('');
+
+  const tooltip = document.getElementById('sessionTooltip');
+  const crosshair = document.getElementById('sessChartCrosshair');
+  const hitzone = document.getElementById('sessChartHitzone');
+
+  function showAt(i){
+    const s = sessions[i];
+    const x = xAt(i), y = yAt(s.balance);
+    crosshair.setAttribute('x1', x); crosshair.setAttribute('x2', x);
+    crosshair.style.display = 'block';
+    const rect = svg.getBoundingClientRect();
+    const scale = rect.width / W;
+    tooltip.style.left = (x * scale) + 'px';
+    tooltip.style.top = (y * scale) + 'px';
+    tooltip.innerHTML = `<b>${fmtSigned(s.balance)}枚</b><br>#${i + 1} ${formatDate(s.date)}`;
+    tooltip.style.display = 'block';
+  }
+  function hide(){
+    crosshair.style.display = 'none';
+    tooltip.style.display = 'none';
+  }
+  function nearestIndex(clientX){
+    const rect = svg.getBoundingClientRect();
+    const scale = rect.width / W;
+    const userX = (clientX - rect.left) / scale;
+    let best = 0, bestDist = Infinity;
+    for(let i = 0; i < n; i++){
+      const d = Math.abs(xAt(i) - userX);
+      if(d < bestDist){ bestDist = d; best = i; }
+    }
+    return best;
+  }
+  hitzone.addEventListener('pointermove', (ev) => showAt(nearestIndex(ev.clientX)));
+  hitzone.addEventListener('pointerdown', (ev) => showAt(nearestIndex(ev.clientX)));
+  svg.addEventListener('pointerleave', hide);
+}
+
+document.getElementById('sessionList').addEventListener('click', (e) => {
+  const btn = e.target.closest('.session-del');
+  if(!btn) return;
+  if(!confirm('このセッションの記録を削除しますか？')) return;
+  const idx = parseInt(btn.dataset.idx, 10);
+  const sessions = loadSessions();
+  sessions.splice(idx, 1);
+  saveSessions(sessions);
+  render();
+});
+
+document.getElementById('btnClearAll').addEventListener('click', () => {
+  if(!confirm('全セッションの記録を削除します。元に戻せません。よろしいですか？')) return;
+  localStorage.removeItem(STORAGE_KEY_SESSIONS);
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
