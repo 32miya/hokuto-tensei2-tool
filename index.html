@@ -270,6 +270,7 @@
       <input type="checkbox" id="chkSettingChange">
       本日の1G目から打っている（設定変更の可能性あり・天井短縮）
     </label>
+    <div class="hint">短縮天井は最初の1サイクルのみ有効なため、あべし成立を記録すると自動でチェックが外れ、通常の天井に戻ります。</div>
   </div>
 
   <div class="card quick-summary">
@@ -1276,6 +1277,7 @@ function confirmPayoutModal(){
   saveTanpatsu(0);
   saveOmen(null);
   saveShoubu(false);
+  saveSetChange(false);
   closePayoutModal();
   render();
 }
