@@ -133,8 +133,11 @@
   .empty{color:var(--sub);font-size:0.8rem;text-align:center;padding:8px 0;}
 
   .chart-card{position:relative;margin-bottom:10px;}
-  .chart-card svg{width:100%;height:auto;aspect-ratio:320/160;display:block;touch-action:none;cursor:crosshair;}
-  .chart-card #payoutChart{aspect-ratio:320/90;}
+  .chart-card svg{width:100%;height:auto;aspect-ratio:320/190;display:block;touch-action:none;cursor:crosshair;}
+  .chart-legend{display:flex;gap:14px;font-size:0.7rem;color:var(--sub);margin-bottom:6px;}
+  .chart-legend .legend-swatch{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle;}
+  .chart-legend .legend-line{background:var(--gold);}
+  .chart-legend .legend-bar{background:#5b8fae;}
   .chart-label{font-size:0.68rem;color:var(--sub);margin-bottom:4px;}
   .chart-tooltip{
     position:absolute;pointer-events:none;display:none;
@@ -348,6 +351,7 @@
     <div class="row" style="margin-top:12px;">
       <input type="number" id="inputBalance" placeholder="現在の差枚数（マイナスも入力可）">
     </div>
+    <div class="hint">あべし成立を記録するたび、そのサイクルの消費枚数（G数×3枚）を差し引き、入力した獲得枚数を足して自動更新します。手動で書き換えても構いません。</div>
     <div class="hint" id="balanceInfo"></div>
     <div class="hint">576G＝モードC消滅、896G＝モードB消滅（以降モードA確定）という実際の壁に沿って「やめ時濃厚」ゾーンを判定し、天井が十分近づいたら「天井狙い推奨」に切り替えます（獲得枚数の記録があればそこから計算した平均獲得枚数、なければ天井の80%地点を目安に使用）。差枚数が大きくマイナスの場合はそれより早く「やめ時濃厚」を出します。</div>
   </div>
@@ -438,13 +442,12 @@
     <h2>あべし数の履歴（<span id="histCount">0</span>件）</h2>
     <div class="hist-stats" id="histStats"></div>
     <div class="chart-card" id="chartCard" style="display:none;">
-      <svg id="histChart" viewBox="0 0 320 160"></svg>
+      <div class="chart-legend">
+        <span><i class="legend-swatch legend-line"></i>あべし数</span>
+        <span><i class="legend-swatch legend-bar"></i>獲得枚数</span>
+      </div>
+      <svg id="histChart" viewBox="0 0 320 190"></svg>
       <div class="chart-tooltip" id="chartTooltip"></div>
-    </div>
-    <div class="chart-card" id="payoutChartCard" style="display:none;margin-top:4px;">
-      <div class="chart-label">獲得枚数</div>
-      <svg id="payoutChart" viewBox="0 0 320 90"></svg>
-      <div class="chart-tooltip" id="payoutTooltip"></div>
     </div>
     <div class="empty" id="chartEmptyHint" style="display:none;">データが2件以上たまるとグラフが表示されます</div>
     <div class="hist-log" id="historyList"><div class="empty">まだデータがありません</div></div>
@@ -989,7 +992,6 @@ function render(){
     }).join('');
   }
   renderChart(history);
-  renderPayoutChart(history);
 
   const inputTotalG = document.getElementById('inputTotalG');
   const manualTotalG = loadTotalG();
@@ -1041,6 +1043,8 @@ function render(){
   }
 }
 
+// あべし数（折れ線・左軸）と獲得枚数（棒・右軸）を1つのグラフに統合。
+// 尺度がまったく違う2指標を重ねるため、左右で独立した軸を使い分けている。
 function renderChart(history){
   const chartCard = document.getElementById('chartCard');
   const chartEmptyHint = document.getElementById('chartEmptyHint');
@@ -1052,32 +1056,45 @@ function renderChart(history){
   chartCard.style.display = 'block';
   chartEmptyHint.style.display = 'none';
 
-  const W = 320, H = 160, padL = 32, padR = 10, padT = 12, padB = 20;
+  const W = 320, H = 190, padL = 32, padR = 32, padT = 12, padB = 20;
   const plotW = W - padL - padR, plotH = H - padT - padB;
   const n = history.length;
   const values = history.map(e => e.g);
-  const rawMax = Math.max(...values);
-  const yMax = Math.max(64, Math.ceil(rawMax * 1.15 / 50) * 50);
+  const payoutValues = history.filter(e => e.payout != null).map(e => e.payout);
+  const yMaxG = Math.max(64, Math.ceil(Math.max(...values) * 1.15 / 50) * 50);
+  const yMaxPayout = Math.max(100, Math.ceil(Math.max(...payoutValues, 0) * 1.15 / 100) * 100);
   const xAt = i => padL + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
-  const yAt = v => padT + (1 - Math.min(v, yMax) / yMax) * plotH;
+  const yAtG = v => padT + (1 - Math.min(v, yMaxG) / yMaxG) * plotH;
+  const yAtPayout = v => padT + (1 - Math.min(v, yMaxPayout) / yMaxPayout) * plotH;
+  const baseline = padT + plotH;
+  const barW = Math.min(20, Math.max(3, (plotW / n) * 0.6));
 
   const parts = [];
-  [0, yMax / 2, yMax].forEach(gy => {
-    const y = yAt(gy);
+  [0, 0.5, 1].forEach(f => {
+    const y = padT + (1 - f) * plotH;
     parts.push(`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="#3a1e1f" stroke-width="1"/>`);
-    parts.push(`<text x="${padL - 5}" y="${(y + 3).toFixed(1)}" text-anchor="end" font-size="8" fill="#b58e88">${Math.round(gy)}</text>`);
+    parts.push(`<text x="${padL - 5}" y="${(y + 3).toFixed(1)}" text-anchor="end" font-size="8" fill="#e0a83c">${Math.round(f * yMaxG)}</text>`);
+    parts.push(`<text x="${W - padR + 5}" y="${(y + 3).toFixed(1)}" text-anchor="start" font-size="8" fill="#5b8fae">${Math.round(f * yMaxPayout)}</text>`);
   });
 
-  const pathD = history.map((e, i) => `${i === 0 ? 'M' : 'L'}${xAt(i).toFixed(1)},${yAt(e.g).toFixed(1)}`).join(' ');
+  history.forEach((e, i) => {
+    if(e.payout == null) return;
+    const x = xAt(i);
+    const y = yAtPayout(e.payout);
+    const h = Math.max(0, baseline - y);
+    parts.push(`<rect x="${(x - barW / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="#5b8fae" fill-opacity="0.85"/>`);
+  });
+
+  const pathD = history.map((e, i) => `${i === 0 ? 'M' : 'L'}${xAt(i).toFixed(1)},${yAtG(e.g).toFixed(1)}`).join(' ');
   parts.push(`<path d="${pathD}" fill="none" stroke="#e0a83c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`);
 
   history.forEach((e, i) => {
     const isLast = i === n - 1;
     const r = isLast ? 5 : 3;
-    parts.push(`<circle cx="${xAt(i).toFixed(1)}" cy="${yAt(e.g).toFixed(1)}" r="${r}" fill="#e0a83c" ${isLast ? 'stroke="#1c0d10" stroke-width="2"' : ''}/>`);
+    parts.push(`<circle cx="${xAt(i).toFixed(1)}" cy="${yAtG(e.g).toFixed(1)}" r="${r}" fill="#e0a83c" ${isLast ? 'stroke="#1c0d10" stroke-width="2"' : ''}/>`);
   });
 
-  const lastX = xAt(n - 1), lastY = yAt(values[n - 1]);
+  const lastX = xAt(n - 1), lastY = yAtG(values[n - 1]);
   const lastAnchor = lastX > W - 40 ? 'end' : 'start';
   parts.push(`<text x="${(lastAnchor === 'end' ? lastX - 8 : lastX + 8).toFixed(1)}" y="${(lastY - 8).toFixed(1)}" font-size="9" fill="#f2e6e2" font-weight="700" text-anchor="${lastAnchor}">${values[n - 1]}G</text>`);
 
@@ -1085,7 +1102,7 @@ function renderChart(history){
   parts.push(`<text x="${xAt(n - 1).toFixed(1)}" y="${H - 5}" font-size="8" fill="#b58e88" text-anchor="end">#${n}</text>`);
 
   parts.push(`<rect id="chartHitzone" x="${padL}" y="0" width="${plotW}" height="${H}" fill="transparent"/>`);
-  parts.push(`<line id="chartCrosshair" x1="0" y1="${padT}" x2="0" y2="${H - padB}" stroke="#b58e88" stroke-width="1" style="display:none;"/>`);
+  parts.push(`<line id="chartCrosshair" x1="0" y1="${padT}" x2="0" y2="${baseline}" stroke="#b58e88" stroke-width="1" style="display:none;"/>`);
 
   const svg = document.getElementById('histChart');
   svg.innerHTML = parts.join('');
@@ -1096,95 +1113,14 @@ function renderChart(history){
 
   function showAt(i){
     const e = history[i];
-    const x = xAt(i), y = yAt(e.g);
+    const x = xAt(i), y = yAtG(e.g);
     crosshair.setAttribute('x1', x); crosshair.setAttribute('x2', x);
     crosshair.style.display = 'block';
     const rect = svg.getBoundingClientRect();
     const scale = rect.width / W;
     tooltip.style.left = (x * scale) + 'px';
     tooltip.style.top = (y * scale) + 'px';
-    tooltip.innerHTML = `<b>${e.g}G</b><br>#${i + 1} ${formatTs(e.ts)}`;
-    tooltip.style.display = 'block';
-  }
-  function hide(){
-    crosshair.style.display = 'none';
-    tooltip.style.display = 'none';
-  }
-  function nearestIndex(clientX){
-    const rect = svg.getBoundingClientRect();
-    const scale = rect.width / W;
-    const userX = (clientX - rect.left) / scale;
-    let best = 0, bestDist = Infinity;
-    for(let i = 0; i < n; i++){
-      const d = Math.abs(xAt(i) - userX);
-      if(d < bestDist){ bestDist = d; best = i; }
-    }
-    return best;
-  }
-  hitzone.addEventListener('pointermove', (ev) => showAt(nearestIndex(ev.clientX)));
-  hitzone.addEventListener('pointerdown', (ev) => showAt(nearestIndex(ev.clientX)));
-  svg.addEventListener('pointerleave', hide);
-}
-
-// 履歴の折れ線グラフ（あべし数）と横位置を揃えた棒グラフ（獲得枚数）。
-// 尺度がまったく違う2指標なので同一グラフの2軸重ねにはせず、上下に並べたグラフとして揃えている。
-function renderPayoutChart(history){
-  const card = document.getElementById('payoutChartCard');
-  const hasAnyPayout = history.some(e => e.payout != null);
-  if(history.length < 2 || !hasAnyPayout){
-    card.style.display = 'none';
-    return;
-  }
-  card.style.display = 'block';
-
-  const W = 320, H = 90, padL = 32, padR = 10, padT = 8, padB = 14;
-  const plotW = W - padL - padR, plotH = H - padT - padB;
-  const n = history.length;
-  const payoutValues = history.filter(e => e.payout != null).map(e => e.payout);
-  const rawMax = Math.max(...payoutValues, 0);
-  const yMax = Math.max(100, Math.ceil(rawMax * 1.15 / 100) * 100);
-  const xAt = i => padL + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
-  const barW = Math.min(20, Math.max(3, (plotW / n) * 0.6));
-  const yAt = v => padT + (1 - Math.min(v, yMax) / yMax) * plotH;
-  const baseline = padT + plotH;
-
-  const parts = [];
-  [0, yMax].forEach(gy => {
-    const y = yAt(gy);
-    parts.push(`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="#3a1e1f" stroke-width="1"/>`);
-    parts.push(`<text x="${padL - 5}" y="${(y + 3).toFixed(1)}" text-anchor="end" font-size="8" fill="#b58e88">${Math.round(gy)}</text>`);
-  });
-
-  history.forEach((e, i) => {
-    if(e.payout == null) return;
-    const x = xAt(i);
-    const y = yAt(e.payout);
-    const h = Math.max(0, baseline - y);
-    parts.push(`<rect x="${(x - barW / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="#5b8fae"/>`);
-  });
-
-  parts.push(`<rect id="payoutHitzone" x="${padL}" y="0" width="${plotW}" height="${H}" fill="transparent"/>`);
-  parts.push(`<line id="payoutCrosshair" x1="0" y1="${padT}" x2="0" y2="${baseline}" stroke="#b58e88" stroke-width="1" style="display:none;"/>`);
-
-  const svg = document.getElementById('payoutChart');
-  svg.innerHTML = parts.join('');
-
-  const tooltip = document.getElementById('payoutTooltip');
-  const crosshair = document.getElementById('payoutCrosshair');
-  const hitzone = document.getElementById('payoutHitzone');
-
-  function showAt(i){
-    const e = history[i];
-    const x = xAt(i);
-    crosshair.setAttribute('x1', x); crosshair.setAttribute('x2', x);
-    crosshair.style.display = 'block';
-    const rect = svg.getBoundingClientRect();
-    const scale = rect.width / W;
-    tooltip.style.left = (x * scale) + 'px';
-    tooltip.style.top = (yAt(e.payout != null ? e.payout : 0) * scale) + 'px';
-    tooltip.innerHTML = e.payout != null
-      ? `<b>${e.payout}枚</b><br>#${i + 1} ${formatTs(e.ts)}`
-      : `<b>未入力</b><br>#${i + 1} ${formatTs(e.ts)}`;
+    tooltip.innerHTML = `<b>${e.g}G</b>${e.payout != null ? ` / ${e.payout}枚` : ''}<br>#${i + 1} ${formatTs(e.ts)}`;
     tooltip.style.display = 'block';
   }
   function hide(){
@@ -1273,6 +1209,8 @@ function confirmPayoutModal(){
   const history = loadHistory();
   history.push({g: currentG, ts: Date.now(), payout});
   saveHistory(history);
+  const consumed = currentG * COST_PER_GAME;
+  saveBalance(loadBalance() - consumed + (payout || 0));
   saveCurrentG(0);
   saveTanpatsu(0);
   saveOmen(null);
@@ -1308,8 +1246,10 @@ document.getElementById('historyList').addEventListener('click', (e) => {
   if(!btn) return;
   const idx = parseInt(btn.dataset.idx, 10);
   const history = loadHistory();
+  const removed = history[idx];
   history.splice(idx, 1);
   saveHistory(history);
+  saveBalance(loadBalance() - (removed.payout || 0) + removed.g * COST_PER_GAME);
   render();
 });
 
@@ -1318,9 +1258,12 @@ document.getElementById('historyList').addEventListener('change', (e) => {
   if(!input) return;
   const idx = parseInt(input.dataset.idx, 10);
   const v = parseInt(input.value, 10);
+  const newPayout = Number.isFinite(v) ? v : null;
   const history = loadHistory();
-  history[idx].payout = Number.isFinite(v) ? v : null;
+  const oldPayout = history[idx].payout || 0;
+  history[idx].payout = newPayout;
   saveHistory(history);
+  saveBalance(loadBalance() + ((newPayout || 0) - oldPayout));
   render();
 });
 
