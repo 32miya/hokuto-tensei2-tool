@@ -462,6 +462,21 @@
       <div class="lamp-result" id="lampCResult"></div>
     </div>
     <details class="hint-toggle"><summary></summary><p>通常時は100G消化ごとにいずれかのランプが発光します。発光した色・パターンを選ぶと示唆内容が表示されます。消灯時は判断材料なしとして扱ってください。</p></details>
+
+    <div class="lamp-row" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line);">
+      <label>小役入賞時のLED色（成立役を選択）</label>
+      <select id="selKoyakuType">
+        <option value="">選択してください</option>
+      </select>
+    </div>
+    <div class="lamp-row" id="koyakuPatternRow" style="display:none;">
+      <label>光ったLED色・パターン</label>
+      <select id="selKoyakuPattern">
+        <option value="">選択してください</option>
+      </select>
+      <div class="lamp-result" id="koyakuResult"></div>
+    </div>
+    <details class="hint-toggle"><summary></summary><p>小役・レア役の入賞時、通常とは違う色のLEDが光ることでAT前兆を示唆することがあります。成立した役と光った色を選ぶと示唆内容が表示されます。</p><p style="color:var(--sub);">参考情報：非前兆中に第3停止で告知演出が頻発する場合、高確率滞在の可能性が高くなるとされています（具体的な信頼度%は公表されていません）。</p></details>
   </div>
 
   <div class="card counter-card">
@@ -606,6 +621,31 @@ const LAMP_C_OPTIONS = [
   {label:'黄緑・点灯', text:'早い初当たり示唆（中）'},
   {label:'金色・点灯', text:'早い初当たり示唆（強）'}
 ];
+
+// 小役入賞時のLED色示唆（1geki.jpのランプ示唆まとめより）。役ごとに「デフォルト色」があり、
+// それ以外の色・パターンで光るとAT前兆を示唆する。
+const KOYAKU_LED_OPTIONS = {
+  'リプレイ': [
+    {label:'青色・点滅（デフォルト）', text:'特に示唆なし（通常パターン）'},
+    {label:'それ以外の色・パターン', text:'AT本前兆濃厚'}
+  ],
+  '右下がりベル・スイカ・弱チェリー': [
+    {label:'黄色/緑色・点滅（デフォルト）', text:'特に示唆なし（通常パターン）'},
+    {label:'白色・点滅', text:'高確以上'},
+    {label:'白色・高速点滅', text:'天破・AT本前兆'},
+    {label:'虹色', text:'AT本前兆濃厚'}
+  ],
+  '強チェリー': [
+    {label:'赤色・高速点滅（デフォルト）', text:'特に示唆なし（通常パターン）'},
+    {label:'白色・高速点滅', text:'天破・AT本前兆'},
+    {label:'虹色', text:'AT本前兆濃厚'}
+  ],
+  '勝舞揃い・確定チェリー': [
+    {label:'白色・高速点滅（デフォルト）', text:'特に示唆なし（通常パターン）'},
+    {label:'白色・点滅', text:'天破・AT本前兆'},
+    {label:'虹色', text:'AT本前兆濃厚'}
+  ]
+};
 const STORAGE_KEY_HISTORY = 'hokuto_tensei2_abeshi_history_v1';
 const STORAGE_KEY_CURRENT = 'hokuto_tensei2_current_g_v1';
 const STORAGE_KEY_SETCHANGE = 'hokuto_tensei2_setchange_v1';
@@ -1532,6 +1572,39 @@ function initLampSelect(selectId, resultId, options){
 initLampSelect('selLampA', 'lampAResult', LAMP_A_OPTIONS);
 initLampSelect('selLampB', 'lampBResult', LAMP_B_OPTIONS);
 initLampSelect('selLampC', 'lampCResult', LAMP_C_OPTIONS);
+
+const selKoyakuType = document.getElementById('selKoyakuType');
+const selKoyakuPattern = document.getElementById('selKoyakuPattern');
+const koyakuPatternRow = document.getElementById('koyakuPatternRow');
+const koyakuResult = document.getElementById('koyakuResult');
+Object.keys(KOYAKU_LED_OPTIONS).forEach(name => {
+  const el = document.createElement('option');
+  el.value = name;
+  el.textContent = name;
+  selKoyakuType.appendChild(el);
+});
+selKoyakuType.addEventListener('change', () => {
+  selKoyakuPattern.innerHTML = '<option value="">選択してください</option>';
+  koyakuResult.textContent = '';
+  const options = KOYAKU_LED_OPTIONS[selKoyakuType.value];
+  if(!options){
+    koyakuPatternRow.style.display = 'none';
+    return;
+  }
+  options.forEach((opt, i) => {
+    const el = document.createElement('option');
+    el.value = i;
+    el.textContent = opt.label;
+    selKoyakuPattern.appendChild(el);
+  });
+  koyakuPatternRow.style.display = 'block';
+});
+selKoyakuPattern.addEventListener('change', () => {
+  const options = KOYAKU_LED_OPTIONS[selKoyakuType.value];
+  koyakuResult.textContent = (options && selKoyakuPattern.value !== '')
+    ? options[parseInt(selKoyakuPattern.value, 10)].text
+    : '';
+});
 
 render();
 </script>
