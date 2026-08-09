@@ -47,6 +47,10 @@
     font-size:0.9rem;margin:0 0 10px;color:var(--red);
     display:flex;align-items:center;gap:6px;
   }
+  .compact-card h2{margin-bottom:6px;font-size:0.82rem;}
+  .compact-card input[type=number]{padding:9px 8px;font-size:1.2rem;}
+  .compact-card > .row button, .compact-card .btn-step{padding:9px 10px;}
+  .compact-card .counter-display{font-size:1.2rem;}
   .row{display:flex;gap:8px;}
   input[type=number]{
     flex:1;min-width:0;
@@ -286,37 +290,36 @@
     </div>
   </div>
 
-  <div class="card primary">
+  <div class="card primary compact-card">
     <h2>① 現在のあべし数（経過ゲーム数）</h2>
     <div class="row">
       <button class="btn-step" id="btnMinus">−1</button>
       <input type="number" id="inputCurrentG" inputmode="numeric" placeholder="0" min="0">
       <button class="btn-step" id="btnPlus">＋1</button>
     </div>
-    <details class="hint-toggle"><summary></summary><p>まだ当選していない現在のゲーム数を入力・更新すると、②③④⑤がリアルタイムで再計算されます。</p></details>
-    <div class="row" style="margin-top:10px;">
+    <div class="row" style="margin-top:6px;">
       <button class="btn-gold" id="btnRegister" style="flex:1;">🎯 あべし成立！記録してリセット</button>
     </div>
-    <details class="hint-toggle"><summary></summary><p>当選したらこのボタンで履歴に記録し、現在のゲーム数を0に戻します。</p></details>
+    <details class="hint-toggle"><summary></summary><p>まだ当選していない現在のゲーム数を入力・更新すると②③④⑤がリアルタイムで再計算されます。当選したら登録ボタンで履歴に記録し、現在のゲーム数を0に戻します。</p></details>
     <div class="warn" id="outOfRangeWarn" style="display:none;">
       ⚠ 想定データ範囲を超えています。参考値は均等表示になります。
     </div>
+
+    <div class="row" style="margin-top:8px;align-items:center;">
+      <span style="font-size:0.78rem;color:var(--sub);flex:1;">天破の刻 突入回数</span>
+      <button class="btn-step" id="btnTenpaMinus">−1</button>
+      <span class="counter-display" id="tenpaCount" style="font-size:1.2rem;margin:0 8px;">0</span>
+      <button class="btn-step" id="btnTenpaPlus">＋1</button>
+    </div>
+
     <details class="sub-inputs">
-      <summary>詳細入力（G数・天破カウント・設定変更）</summary>
+      <summary>詳細入力（G数・設定変更）</summary>
       <div class="row" style="margin-top:10px;">
         <input type="number" id="inputTotalG" inputmode="numeric" placeholder="現在のG数（台の累計・リセットなし）" min="0">
         <button class="btn-sub" id="btnTotalGRegister" style="flex:0 0 auto;">登録</button>
       </div>
       <div class="hint" id="totalGStatus"></div>
-      <details class="hint-toggle"><summary></summary><p>実機のG数カウンター（あべしとは別の、リセットされない累計値）です。登録すると⑦設定判別に使われます。登録時に所持枚数の確認ウィンドウが開きます。</p></details>
-
-      <div class="row" style="margin-top:14px;align-items:center;">
-        <span style="font-size:0.82rem;color:var(--sub);flex:1;">天破の刻 突入回数</span>
-        <button class="btn-sub" id="btnTenpaMinus" style="flex:0 0 auto;">−1</button>
-        <span class="counter-display" id="tenpaCount" style="font-size:1.4rem;margin:0 10px;">0</span>
-        <button class="btn-gold" id="btnTenpaPlus" style="flex:0 0 auto;">＋1</button>
-      </div>
-      <details class="hint-toggle"><summary></summary><p>天破の刻に突入するたびに＋1してください。台移動までリセットされず、⑦設定判別に使われます。</p></details>
+      <details class="hint-toggle"><summary></summary><p>実機のG数カウンター（あべしとは別の、リセットされない累計値）です。登録すると⑦設定判別に使われます。登録時に所持枚数の確認ウィンドウが開きます。天破の刻突入回数は台移動までリセットされず、⑦設定判別に使われます。</p></details>
 
       <label class="toggle-row">
         <input type="checkbox" id="chkSettingChange">
