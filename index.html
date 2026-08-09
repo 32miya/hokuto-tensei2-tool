@@ -187,6 +187,7 @@
   .yame-badge.green{color:#7fd68a;border-color:#3a5a3f;}
   .yame-badge.yellow{color:var(--gold);border-color:#6a5323;}
   .yame-badge.red{color:var(--red);border-color:var(--red-dark);}
+  .yame-badge.push{color:#6fb8e0;border-color:#2c5570;}
   .yame-pct{font-size:2rem;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;}
 
   .setting-list{display:flex;flex-direction:column;gap:6px;margin-top:4px;}
@@ -205,6 +206,7 @@
   .qs-value.green{color:#7fd68a;}
   .qs-value.yellow{color:var(--gold);}
   .qs-value.red{color:var(--red);}
+  .qs-value.push{color:#6fb8e0;}
 
   .benefit-list{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
   .benefit-row{display:flex;align-items:center;gap:8px;font-size:0.78rem;color:var(--sub);}
@@ -339,14 +341,14 @@
       <div class="yame-badge" id="yameBadge">-</div>
       <div class="yame-pct" id="yamePct">--%</div>
     </div>
-    <div class="hint">通常A（当たりまで最も長引くモード）である確率を「やめ時確率」の目安として表示しています。100%に近いほど長期化しやすい状態です。⑥のゾーン外プレ前兆の判定があれば、そちらを優先して反映します。</div>
+    <div class="hint" id="yameReason">通常A（当たりまで最も長引くモード）である確率を「やめ時確率」の目安として表示しています。⑥のゾーン外プレ前兆の判定があれば、そちらを優先して反映します。</div>
     <div class="hint" id="yameExpected"></div>
     <div class="best-tag" id="nextHotRange" style="margin-top:10px;display:block;"></div>
     <div class="row" style="margin-top:12px;">
       <input type="number" id="inputBalance" placeholder="現在の差枚数（マイナスも入力可）">
     </div>
     <div class="hint" id="balanceInfo"></div>
-    <div class="hint">差枚数が大きくマイナスの場合、モード確率だけの判定より早めに「やめ時濃厚」を表示します（3枚/G消化と仮定した投資目安つき）。</div>
+    <div class="hint">576G＝モードC消滅、896G＝モードB消滅（以降モードA確定）という実際の壁に沿って「やめ時濃厚」ゾーンを判定し、天井が十分近づいたら「天井狙い推奨」に切り替えます（獲得枚数の記録があればそこから計算した平均獲得枚数、なければ天井の80%地点を目安に使用）。差枚数が大きくマイナスの場合はそれより早く「やめ時濃厚」を出します。</div>
   </div>
 
   <div class="card">
@@ -844,6 +846,7 @@ function render(){
     });
   }
   const omen = loadOmen();
+  const history = loadHistory();
   const omenAdvice = document.getElementById('omenAdvice');
   if(omen){
     omenAdvice.style.display = 'block';
@@ -874,45 +877,66 @@ function render(){
   document.getElementById('qsState').textContent = `${MODE_LABEL[bestMode]} ${(bestVal * 100).toFixed(0)}%`;
 
   const yamePctVal = live.post.A;
-  const pastZone1 = currentG >= ZONES[0].min;
   const inputBalance = document.getElementById('inputBalance');
   const balance = loadBalance();
   if(document.activeElement !== inputBalance){
     inputBalance.value = balance || '';
   }
-  const yameBadge = document.getElementById('yameBadge');
-  let yameLabel, yameColor;
-  if(omen && omen.result === 'B+'){
-    yameLabel = '続行推奨（前兆ありで否定）';
-    yameColor = 'green';
-  } else if(balance <= BALANCE_DANGER && yamePctVal >= 0.55){
-    yameLabel = 'やめ時濃厚（差枚マイナス大）';
-    yameColor = 'red';
-  } else if(yamePctVal >= 0.80 && pastZone1){
-    yameLabel = 'やめ時濃厚';
-    yameColor = 'red';
-  } else if(yamePctVal >= 0.55){
-    yameLabel = '様子見';
-    yameColor = 'yellow';
-  } else {
-    yameLabel = '続行推奨';
-    yameColor = 'green';
-  }
-  yameBadge.textContent = (yameColor === 'red' ? '🔴 ' : yameColor === 'yellow' ? '🟡 ' : '🟢 ') + yameLabel;
-  yameBadge.className = 'yame-badge ' + yameColor;
-  document.getElementById('yamePct').textContent = (yamePctVal * 100).toFixed(1) + '%';
-  const qsYame = document.getElementById('qsYame');
-  qsYame.textContent = (yameColor === 'red' ? '🔴 ' : yameColor === 'yellow' ? '🟡 ' : '🟢 ') + yameLabel;
-  qsYame.className = 'qs-value ' + yameColor;
   const expG = expectedRemaining(live, ctx, currentG);
-  document.getElementById('yameExpected').textContent =
-    `続行した場合の残り期待ゲーム数の目安: 約${Math.round(expG)}G（攻略サイト情報では、⑥第1区間48G付近でノーヒットの場合のヤメ目安として期待値104〜105%程度という情報もあります）`;
   const investToExpected = Math.round(expG * COST_PER_GAME);
   const investToTenjou = Math.round(remain * COST_PER_GAME);
+
+  const payoutSamples = history.filter(e => e.payout != null).map(e => e.payout);
+  const avgPayout = payoutSamples.length >= 3
+    ? payoutSamples.reduce((a, b) => a + b, 0) / payoutSamples.length
+    : null;
+  const pushEligible = avgPayout != null
+    ? investToTenjou <= avgPayout * 0.6
+    : currentG >= ctx.tenjouG * 0.8;
+
+  const yameBadge = document.getElementById('yameBadge');
+  let yameLabel, yameColor, yameEmoji, yameReason;
+  if(omen && omen.result === 'B+'){
+    yameLabel = '続行推奨（前兆ありで否定）';
+    yameColor = 'green'; yameEmoji = '🟢';
+    yameReason = 'ゾーン外プレ前兆でモードB以上の証拠があるため、モード確率だけの判定より優先しています。';
+  } else if(pushEligible){
+    yameLabel = '天井狙い推奨';
+    yameColor = 'push'; yameEmoji = '🎯';
+    yameReason = avgPayout != null
+      ? `天井までの残り投資目安（約${investToTenjou}枚）が、これまでの平均獲得枚数（約${Math.round(avgPayout)}枚）の6割以下まで縮んだため、やめるより天井を狙う方が有利な段階です。`
+      : `天井（${ctx.tenjouG}G）の80%地点を超えたため、残り投資に対して確定当選の価値が上回りやすい段階です（獲得枚数の記録が3件以上たまると、実績に基づく判定に切り替わります）。`;
+  } else if(balance <= BALANCE_DANGER){
+    yameLabel = 'やめ時濃厚（差枚マイナス大）';
+    yameColor = 'red'; yameEmoji = '🔴';
+    yameReason = `差枚数が${BALANCE_DANGER}枚以下のため、モード確率にかかわらず早めの「やめ時濃厚」表示にしています。`;
+  } else if(currentG >= MODE_CEILING.B){
+    yameLabel = 'やめ時濃厚';
+    yameColor = 'red'; yameEmoji = '🔴';
+    yameReason = `${MODE_CEILING.B}Gを超え、モードB・C・天国の可能性が消えて通常Aが確定しました。天井まではまだ遠く、投資がかさみやすい区間です。`;
+  } else if(currentG >= MODE_CEILING.C){
+    yameLabel = '様子見';
+    yameColor = 'yellow'; yameEmoji = '🟡';
+    yameReason = `${MODE_CEILING.C}Gを超えモードCの可能性は消えましたが、モードB（〜${MODE_CEILING.B}G）はまだ残っています。`;
+  } else {
+    yameLabel = '続行推奨';
+    yameColor = 'green'; yameEmoji = '🟢';
+    yameReason = `${MODE_CEILING.C}Gまではモードいずれの可能性も残っており、当選の目が多い区間です。`;
+  }
+  yameBadge.textContent = yameEmoji + ' ' + yameLabel;
+  yameBadge.className = 'yame-badge ' + yameColor;
+  document.getElementById('yamePct').textContent = (yamePctVal * 100).toFixed(1) + '%';
+  document.getElementById('yameReason').textContent = yameReason;
+  const qsYame = document.getElementById('qsYame');
+  qsYame.textContent = yameEmoji + ' ' + yameLabel;
+  qsYame.className = 'qs-value ' + yameColor;
+  document.getElementById('yameExpected').textContent =
+    `続行した場合の残り期待ゲーム数の目安: 約${Math.round(expG)}G（攻略サイト情報では、⑥第1区間48G付近でノーヒットの場合のヤメ目安として期待値104〜105%程度という情報もあります）`;
   document.getElementById('balanceInfo').innerHTML =
     `現在の差枚数: <b>${balance >= 0 ? '+' : ''}${balance}枚</b><br>` +
     `期待当選までの追加投資目安: 約${investToExpected}枚（${COST_PER_GAME}枚/G想定）<br>` +
-    `天井到達までの追加投資目安（最大）: 約${investToTenjou}枚`;
+    `天井到達までの追加投資目安（最大）: 約${investToTenjou}枚` +
+    (avgPayout != null ? `<br>これまでの平均獲得枚数: 約${Math.round(avgPayout)}枚（${payoutSamples.length}件）` : '');
 
   const preds = predictTop3Live(live, ctx);
   const nextHotRange = document.getElementById('nextHotRange');
@@ -937,7 +961,6 @@ function render(){
     });
   }
 
-  const history = loadHistory();
   const histList = document.getElementById('historyList');
   const histStats = document.getElementById('histStats');
   document.getElementById('histCount').textContent = history.length;
