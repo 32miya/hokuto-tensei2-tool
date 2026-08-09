@@ -307,6 +307,14 @@
         <div class="qs-label">⑦設定判別</div>
         <div class="qs-value" id="qsSetting">-</div>
       </div>
+      <div class="qs-tile">
+        <div class="qs-label">やめ時まで</div>
+        <div class="qs-value" id="qsYameRemain">-</div>
+      </div>
+      <div class="qs-tile">
+        <div class="qs-label">収支の余裕</div>
+        <div class="qs-value" id="qsBalanceRoom">-</div>
+      </div>
     </div>
   </div>
 
@@ -1094,6 +1102,21 @@ function render(){
   const qsYame = document.getElementById('qsYame');
   qsYame.textContent = yameEmoji + ' ' + yameLabel;
   qsYame.className = 'qs-value ' + yameColor;
+
+  const yameRemainG = (yameColor === 'red' || yameColor === 'push') ? 0 : Math.max(0, MODE_CEILING.B - currentG);
+  const qsYameRemain = document.getElementById('qsYameRemain');
+  qsYameRemain.textContent = yameRemainG > 0 ? `あと${yameRemainG}G` : '到達済み';
+  qsYameRemain.className = 'qs-value ' + (yameRemainG > 0 ? 'yellow' : 'red');
+
+  const qsBalanceRoom = document.getElementById('qsBalanceRoom');
+  if(balance > 0){
+    const gamesUntilZero = Math.floor(balance / COST_PER_GAME);
+    qsBalanceRoom.textContent = `+${gamesUntilZero}G分`;
+    qsBalanceRoom.className = 'qs-value green';
+  } else {
+    qsBalanceRoom.textContent = `${balance}枚`;
+    qsBalanceRoom.className = 'qs-value red';
+  }
   document.getElementById('yameExpected').textContent =
     `続行した場合の残り期待ゲーム数の目安: 約${Math.round(expG)}G（攻略サイト情報では、⑥第1区間48G付近でノーヒットの場合のヤメ目安として期待値104〜105%程度という情報もあります）`;
   const totalPayoutSoFar = payoutSamples.reduce((a, b) => a + b, 0);
