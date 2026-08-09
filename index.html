@@ -23,14 +23,14 @@
     color:var(--text);
     font-family:"Hiragino Sans","Yu Gothic",system-ui,-apple-system,sans-serif;
     min-height:100vh;
-    padding:16px 12px 60px;
+    padding:8px 12px 60px;
   }
   .wrap{max-width:520px;margin:0 auto;}
-  header{text-align:center;margin-bottom:14px;}
+  header{text-align:center;margin-bottom:8px;}
   header h1{
-    font-size:1.35rem;margin:0 0 4px;
+    font-size:1.05rem;margin:0;
     color:var(--gold);
-    letter-spacing:0.03em;
+    letter-spacing:0.02em;
     text-shadow:0 0 10px rgba(224,168,60,0.35);
   }
   header .note{font-size:0.72rem;color:var(--sub);line-height:1.5;}
@@ -38,8 +38,8 @@
     background:linear-gradient(180deg,var(--panel2),var(--panel));
     border:1px solid var(--line);
     border-radius:14px;
-    padding:14px;
-    margin-bottom:14px;
+    padding:10px 12px;
+    margin-bottom:10px;
     box-shadow:0 4px 14px rgba(0,0,0,0.35);
   }
   .card.primary{border-color:var(--gold);}
@@ -148,6 +148,15 @@
   }
   .chart-tooltip b{color:var(--gold);font-size:0.95rem;}
 
+  details.sub-inputs{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);}
+  details.sub-inputs summary{
+    font-size:0.8rem;color:var(--sub);cursor:pointer;font-weight:700;
+    list-style:none;
+  }
+  details.sub-inputs summary::-webkit-details-marker{display:none;}
+  details.sub-inputs summary::before{content:"▶ ";color:var(--gold);}
+  details.sub-inputs[open] summary::before{content:"▼ ";}
+
   details.hint-toggle{margin-top:6px;}
   details.hint-toggle summary{
     font-size:0.72rem;color:var(--sub);cursor:pointer;list-style:none;
@@ -210,14 +219,14 @@
   .setting-label{width:44px;flex-shrink:0;font-size:0.8rem;font-weight:700;}
   .setting-pct{width:48px;text-align:right;font-size:0.8rem;font-variant-numeric:tabular-nums;color:var(--sub);}
 
-  .quick-summary{padding:10px;}
-  .qs-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .quick-summary{padding:8px;}
+  .qs-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
   .qs-tile{
-    background:#0e0506;border:1px solid var(--line);border-radius:10px;
-    padding:10px;text-align:center;
+    background:#0e0506;border:1px solid var(--line);border-radius:8px;
+    padding:6px 4px;text-align:center;
   }
-  .qs-label{font-size:0.68rem;color:var(--sub);margin-bottom:4px;}
-  .qs-value{font-size:1.05rem;font-weight:700;color:var(--text);line-height:1.3;}
+  .qs-label{font-size:0.6rem;color:var(--sub);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .qs-value{font-size:0.85rem;font-weight:700;color:var(--text);line-height:1.25;}
   .qs-value.green{color:#7fd68a;}
   .qs-value.yellow{color:var(--gold);}
   .qs-value.red{color:var(--red);}
@@ -246,10 +255,6 @@
 <div class="wrap">
   <header>
     <h1>北斗の拳 転生の章2　攻略ツール</h1>
-    <div class="note">
-      規定あべし振り分け表＋実測モード移行率（設定1）を組み合わせた状態推定ツール。<br>
-      ※「天性の章2」は正式名称「転生の章2」の可能性があります。
-    </div>
   </header>
 
   <div class="card quick-summary">
@@ -296,26 +301,29 @@
     <div class="warn" id="outOfRangeWarn" style="display:none;">
       ⚠ 想定データ範囲を超えています。参考値は均等表示になります。
     </div>
-    <div class="row" style="margin-top:14px;">
-      <input type="number" id="inputTotalG" inputmode="numeric" placeholder="現在のG数（台の累計・リセットなし）" min="0">
-      <button class="btn-sub" id="btnTotalGRegister" style="flex:0 0 auto;">登録</button>
-    </div>
-    <div class="hint" id="totalGStatus"></div>
-    <details class="hint-toggle"><summary></summary><p>実機のG数カウンター（あべしとは別の、リセットされない累計値）です。登録すると⑦設定判別に使われます。登録時に所持枚数の確認ウィンドウが開きます。</p></details>
+    <details class="sub-inputs">
+      <summary>詳細入力（G数・天破カウント・設定変更）</summary>
+      <div class="row" style="margin-top:10px;">
+        <input type="number" id="inputTotalG" inputmode="numeric" placeholder="現在のG数（台の累計・リセットなし）" min="0">
+        <button class="btn-sub" id="btnTotalGRegister" style="flex:0 0 auto;">登録</button>
+      </div>
+      <div class="hint" id="totalGStatus"></div>
+      <details class="hint-toggle"><summary></summary><p>実機のG数カウンター（あべしとは別の、リセットされない累計値）です。登録すると⑦設定判別に使われます。登録時に所持枚数の確認ウィンドウが開きます。</p></details>
 
-    <div class="row" style="margin-top:14px;align-items:center;">
-      <span style="font-size:0.82rem;color:var(--sub);flex:1;">天破の刻 突入回数</span>
-      <button class="btn-sub" id="btnTenpaMinus" style="flex:0 0 auto;">−1</button>
-      <span class="counter-display" id="tenpaCount" style="font-size:1.4rem;margin:0 10px;">0</span>
-      <button class="btn-gold" id="btnTenpaPlus" style="flex:0 0 auto;">＋1</button>
-    </div>
-    <details class="hint-toggle"><summary></summary><p>天破の刻に突入するたびに＋1してください。台移動までリセットされず、⑦設定判別に使われます。</p></details>
+      <div class="row" style="margin-top:14px;align-items:center;">
+        <span style="font-size:0.82rem;color:var(--sub);flex:1;">天破の刻 突入回数</span>
+        <button class="btn-sub" id="btnTenpaMinus" style="flex:0 0 auto;">−1</button>
+        <span class="counter-display" id="tenpaCount" style="font-size:1.4rem;margin:0 10px;">0</span>
+        <button class="btn-gold" id="btnTenpaPlus" style="flex:0 0 auto;">＋1</button>
+      </div>
+      <details class="hint-toggle"><summary></summary><p>天破の刻に突入するたびに＋1してください。台移動までリセットされず、⑦設定判別に使われます。</p></details>
 
-    <label class="toggle-row">
-      <input type="checkbox" id="chkSettingChange">
-      実際に設定変更があったと思われる（天井短縮）
-    </label>
-    <details class="hint-toggle"><summary></summary><p>電源の入れ直し（リセット）だけでは天井G数・内部状態・有利区間は引き継がれ、短縮されません。短縮天井が働くのは実際に設定変更があった場合のみです。「今日の1G目から打っている」というだけではチェックしないでください。短縮天井は最初の1サイクルのみ有効なため、あべし成立を記録すると自動でチェックが外れ、通常の天井に戻ります。</p></details>
+      <label class="toggle-row">
+        <input type="checkbox" id="chkSettingChange">
+        実際に設定変更があったと思われる（天井短縮）
+      </label>
+      <details class="hint-toggle"><summary></summary><p>電源の入れ直し（リセット）だけでは天井G数・内部状態・有利区間は引き継がれ、短縮されません。短縮天井が働くのは実際に設定変更があった場合のみです。「今日の1G目から打っている」というだけではチェックしないでください。短縮天井は最初の1サイクルのみ有効なため、あべし成立を記録すると自動でチェックが外れ、通常の天井に戻ります。</p></details>
+    </details>
   </div>
 
   <div class="card">
@@ -517,6 +525,7 @@
   </div>
 
   <footer>
+    規定あべし振り分け表＋実測モード移行率（設定1）を組み合わせた状態推定ツールです。※「天性の章2」は正式名称「転生の章2」の可能性があります。<br>
     参考値です。実機の挙動を保証するものではありません。台移動・電源再投入時は必ずクリアしてください。<br>
     データ出典: <a href="https://p-town.dmm.com/machines/4909" target="_blank" rel="noopener">p-town.dmm.com</a>（規定あべし振り分け・設定1）、
     <a href="https://nana-press.com/kaiseki/machine/1059/33039/" target="_blank" rel="noopener">nana-press.com</a>（モード移行率・設定差）、
