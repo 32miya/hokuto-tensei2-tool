@@ -147,6 +147,17 @@
     transform:translate(-50%,-115%);white-space:nowrap;z-index:2;
   }
   .chart-tooltip b{color:var(--gold);font-size:0.95rem;}
+
+  details.hint-toggle{margin-top:6px;}
+  details.hint-toggle summary{
+    font-size:0.72rem;color:var(--sub);cursor:pointer;list-style:none;
+    display:inline-flex;align-items:center;gap:4px;
+  }
+  details.hint-toggle summary::-webkit-details-marker{display:none;}
+  details.hint-toggle summary::before{content:"ⓘ 説明を見る";}
+  details.hint-toggle[open] summary::before{content:"ⓘ 説明を閉じる";}
+  details.hint-toggle p{font-size:0.72rem;color:var(--sub);margin:6px 0 0;line-height:1.7;}
+
   footer{text-align:center;font-size:0.68rem;color:#6b4d49;margin-top:18px;line-height:1.6;}
   footer a{color:#8a6560;}
 
@@ -248,11 +259,11 @@
       <input type="number" id="inputCurrentG" inputmode="numeric" placeholder="0" min="0">
       <button class="btn-step" id="btnPlus">＋1</button>
     </div>
-    <div class="hint">まだ当選していない現在のゲーム数を入力・更新すると、②③④⑤がリアルタイムで再計算されます。</div>
+    <details class="hint-toggle"><summary></summary><p>まだ当選していない現在のゲーム数を入力・更新すると、②③④⑤がリアルタイムで再計算されます。</p></details>
     <div class="row" style="margin-top:10px;">
       <button class="btn-gold" id="btnRegister" style="flex:1;">🎯 あべし成立！記録してリセット</button>
     </div>
-    <div class="hint">当選したらこのボタンで履歴に記録し、現在のゲーム数を0に戻します。</div>
+    <details class="hint-toggle"><summary></summary><p>当選したらこのボタンで履歴に記録し、現在のゲーム数を0に戻します。</p></details>
     <div class="warn" id="outOfRangeWarn" style="display:none;">
       ⚠ 想定データ範囲を超えています。参考値は均等表示になります。
     </div>
@@ -260,7 +271,8 @@
       <input type="number" id="inputTotalG" inputmode="numeric" placeholder="現在のG数（台の累計・リセットなし）" min="0">
       <button class="btn-sub" id="btnTotalGRegister" style="flex:0 0 auto;">登録</button>
     </div>
-    <div class="hint" id="totalGStatus">実機のG数カウンター（あべしとは別の、リセットされない累計値）です。登録すると⑦設定判別に使われます。登録時に所持枚数の確認ウィンドウが開きます。</div>
+    <div class="hint" id="totalGStatus"></div>
+    <details class="hint-toggle"><summary></summary><p>実機のG数カウンター（あべしとは別の、リセットされない累計値）です。登録すると⑦設定判別に使われます。登録時に所持枚数の確認ウィンドウが開きます。</p></details>
 
     <div class="row" style="margin-top:14px;align-items:center;">
       <span style="font-size:0.82rem;color:var(--sub);flex:1;">天破の刻 突入回数</span>
@@ -268,13 +280,13 @@
       <span class="counter-display" id="tenpaCount" style="font-size:1.4rem;margin:0 10px;">0</span>
       <button class="btn-gold" id="btnTenpaPlus" style="flex:0 0 auto;">＋1</button>
     </div>
-    <div class="hint">天破の刻に突入するたびに＋1してください。台移動までリセットされず、⑦設定判別に使われます。</div>
+    <details class="hint-toggle"><summary></summary><p>天破の刻に突入するたびに＋1してください。台移動までリセットされず、⑦設定判別に使われます。</p></details>
 
     <label class="toggle-row">
       <input type="checkbox" id="chkSettingChange">
       本日の1G目から打っている（設定変更の可能性あり・天井短縮）
     </label>
-    <div class="hint">短縮天井は最初の1サイクルのみ有効なため、あべし成立を記録すると自動でチェックが外れ、通常の天井に戻ります。</div>
+    <details class="hint-toggle"><summary></summary><p>短縮天井は最初の1サイクルのみ有効なため、あべし成立を記録すると自動でチェックが外れ、通常の天井に戻ります。</p></details>
   </div>
 
   <div class="card quick-summary">
@@ -320,7 +332,7 @@
         <span class="benefit-text">勝舞魂を2個保有した状態でAT開始（参考情報・確度はやや低め）</span>
       </label>
     </div>
-    <div class="hint">上2つは現在のゲーム数から自動判定。勝舞魂の保有数はAT開始画面で確認して手動チェックしてください。</div>
+    <details class="hint-toggle"><summary></summary><p>上2つは現在のゲーム数から自動判定。勝舞魂の保有数はAT開始画面で確認して手動チェックしてください。</p></details>
 
     <label class="toggle-row">
       交換率：
@@ -330,14 +342,14 @@
       </select>
     </label>
     <div class="benefit-list" id="aimLineList"></div>
-    <div class="hint">攻略サイト（nana-press.com）の期待値計算に基づく狙い目ラインです。当ツールの「①現在のあべし数」とそのまま比較しています。</div>
+    <details class="hint-toggle"><summary></summary><p>攻略サイト（nana-press.com）の期待値計算に基づく狙い目ラインです。当ツールの「①現在のあべし数」とそのまま比較しています。</p></details>
   </div>
 
   <div class="card">
     <h2>③ 現在の推定状態</h2>
     <div class="state-list" id="stateList"></div>
     <div id="bestTag"></div>
-    <div class="hint">実測のモード移行率を初期確率とし、「その回数まで当選していない」という事実を反映して都度再計算しています（過去の当選履歴そのものの積み上げではありません）。</div>
+    <details class="hint-toggle"><summary></summary><p>実測のモード移行率を初期確率とし、「その回数まで当選していない」という事実を反映して都度再計算しています（過去の当選履歴そのものの積み上げではありません）。</p></details>
   </div>
 
   <div class="card">
@@ -346,29 +358,39 @@
       <div class="yame-badge" id="yameBadge">-</div>
       <div class="yame-pct" id="yamePct">--%</div>
     </div>
-    <div class="hint" id="yameReason">通常A（当たりまで最も長引くモード）である確率を「やめ時確率」の目安として表示しています。⑥のゾーン外プレ前兆の判定があれば、そちらを優先して反映します。</div>
+    <div class="hint" id="yameReason"></div>
     <div class="hint" id="yameExpected"></div>
     <div class="best-tag" id="nextHotRange" style="margin-top:10px;display:block;"></div>
+
     <div class="row" style="margin-top:12px;">
-      <input type="number" id="inputInvestment" placeholder="投資額（クレジット追加等の合計枚数）" min="0">
+      <input type="number" id="inputInvestmentYen" placeholder="投資額（円）" step="1000" min="0">
     </div>
-    <div class="row" style="margin-top:8px;">
+    <label class="toggle-row">
+      <input type="checkbox" id="chkMedalRate20">
+      1メダル＝20円で換算（未チェックは1メダル＝10円）
+    </label>
+    <div class="hint" id="investmentYenInfo"></div>
+
+    <div class="row" style="margin-top:10px;">
       <input type="number" id="inputBalance" placeholder="現在の差枚数（マイナスも入力可）">
     </div>
-    <div class="hint">所有枚数 = 投資額 + 獲得枚数合計 − （①「現在のG数」×3枚）で自動計算します（G数未登録の場合はあべし履歴からの概算G数を使用）。投資額を追加した時・G数の登録時・獲得枚数の入力/編集時に再計算されます。差枚数欄は手動で書き換えても構いません。</div>
     <div class="hint" id="balanceInfo"></div>
-    <div class="hint">576G＝モードC消滅、896G＝モードB消滅（以降モードA確定）という実際の壁に沿って「やめ時濃厚」ゾーンを判定し、天井が十分近づいたら「天井狙い推奨」に切り替えます（獲得枚数の記録があればそこから計算した平均獲得枚数、なければ天井の80%地点を目安に使用）。差枚数が大きくマイナスの場合はそれより早く「やめ時濃厚」を出します。</div>
+    <details class="hint-toggle">
+      <summary></summary>
+      <p>所有枚数 = 投資額（円→メダル換算） + 獲得枚数合計 − （①「現在のG数」×3枚）で自動計算します（G数未登録の場合はあべし履歴からの概算G数を使用）。投資額を追加した時・G数の登録時・獲得枚数の入力/編集時に再計算されます。差枚数欄は手動で書き換えても構いません。</p>
+      <p>576G＝モードC消滅、896G＝モードB消滅（以降モードA確定）という実際の壁に沿って「やめ時濃厚」ゾーンを判定し、天井が十分近づいたら「天井狙い推奨」に切り替えます（獲得枚数の記録があればそこから計算した平均獲得枚数、なければ天井の80%地点を目安に使用）。差枚数が大きくマイナスの場合はそれより早く「やめ時濃厚」を出します。</p>
+    </details>
   </div>
 
   <div class="card">
     <h2>⑤ 次あべし当選ゲーム数（有力レンジ TOP3）</h2>
     <div class="pred-list" id="predList"></div>
-    <div class="hint">現在のゲーム数より後のレンジのみを対象に、③の推定状態を踏まえて算出しています。</div>
+    <details class="hint-toggle"><summary></summary><p>現在のゲーム数より後のレンジのみを対象に、③の推定状態を踏まえて算出しています。</p></details>
   </div>
 
   <div class="card">
     <h2>⑥ ゾーン外プレ前兆チェック</h2>
-    <div class="hint">37〜48G・166〜173G・288〜300G・421〜429G・489〜495Gの5区間で、レア役を引いていないのに前兆演出が出た場合は「896G以内当選濃厚（モードB以上）」の目安になります。①のゲーム数がこの区間に入ると下に確認ボタンが表示されます。</div>
+    <details class="hint-toggle"><summary></summary><p>37〜48G・166〜173G・288〜300G・421〜429G・489〜495Gの5区間で、レア役を引いていないのに前兆演出が出た場合は「896G以内当選濃厚（モードB以上）」の目安になります。①のゲーム数がこの区間に入ると下に確認ボタンが表示されます。</p></details>
     <div id="zonePanel"></div>
     <div class="best-tag" id="omenAdvice" style="display:none;margin-top:10px;"></div>
   </div>
@@ -398,11 +420,14 @@
 
   <div class="card">
     <h2>⑦ 設定判別（AT初当たり確率＋天破の刻）</h2>
-    <div class="hint">①の「現在のG数」登録と「天破の刻 突入回数」カウンターを使って計算します。G数未登録の場合は①のあべし履歴から概算します。</div>
     <div class="hist-stats" id="settingStats"></div>
     <div class="setting-list" id="settingList" style="margin-top:10px;"></div>
     <div id="settingBestTag"></div>
-    <div class="hint">総ゲーム数と、AT当選回数（履歴件数）・天破の刻突入回数の両方から実戦確率を計算し、公表されている設定1〜6の数値（AT初当たり1/366.0〜1/273.1、天破の刻1/100.2〜1/81.3）とどれだけ近いかをベイズ推定・統合しています。事前確率は均等と仮定した簡易推定で、サンプル数が少ないと大きくブレます（目安として1000G・当選3回以上が最低ライン）。</div>
+    <details class="hint-toggle">
+      <summary></summary>
+      <p>①の「現在のG数」登録と「天破の刻 突入回数」カウンターを使って計算します。G数未登録の場合は①のあべし履歴から概算します。</p>
+      <p>総ゲーム数と、AT当選回数（履歴件数）・天破の刻突入回数の両方から実戦確率を計算し、公表されている設定1〜6の数値（AT初当たり1/366.0〜1/273.1、天破の刻1/100.2〜1/81.3）とどれだけ近いかをベイズ推定・統合しています。事前確率は均等と仮定した簡易推定で、サンプル数が少ないと大きくブレます（目安として1000G・当選3回以上が最低ライン）。</p>
+    </details>
   </div>
 
   <div class="card">
@@ -428,7 +453,7 @@
       </select>
       <div class="lamp-result" id="lampCResult"></div>
     </div>
-    <div class="hint">通常時は100G消化ごとにいずれかのランプが発光します。発光した色・パターンを選ぶと示唆内容が表示されます。</div>
+    <details class="hint-toggle"><summary></summary><p>通常時は100G消化ごとにいずれかのランプが発光します。発光した色・パターンを選ぶと示唆内容が表示されます。消灯時は判断材料なしとして扱ってください。</p></details>
   </div>
 
   <div class="card counter-card">
@@ -439,7 +464,7 @@
       <button class="btn-gold" id="btnTanpatsuPlus" style="flex:2;">単発を引いた +1</button>
       <button class="btn-sub" id="btnTanpatsuReset">0に</button>
     </div>
-    <div class="hint">あべし成立を記録すると自動で0に戻ります。単純なタリーカウンターです（確率計算には使用していません）。</div>
+    <details class="hint-toggle"><summary></summary><p>あべし成立を記録すると自動で0に戻ります。単純なタリーカウンターです（確率計算には使用していません）。</p></details>
   </div>
 
   <div class="card">
@@ -543,6 +568,7 @@ const AIM_LINES = {
 
 // ランプA/B/C の色・パターンごとの示唆内容（1geki.jpのランプ示唆まとめより）。
 const LAMP_A_OPTIONS = [
+  {label:'消灯', text:'判断不能（消灯時は示唆なし）'},
   {label:'白色・点灯', text:'1280あべし以内の期待度アップ（弱）'},
   {label:'白色・点滅', text:'1280あべし以内の期待度アップ（強）'},
   {label:'水色・点灯', text:'896あべし以内の期待度アップ（弱）'},
@@ -557,6 +583,7 @@ const LAMP_A_OPTIONS = [
   {label:'紫色・点滅', text:'通常C以上を否定できれば設定6濃厚'}
 ];
 const LAMP_B_OPTIONS = [
+  {label:'消灯', text:'判断不能（消灯時は示唆なし）'},
   {label:'白色・点灯', text:'設定2・4示唆'},
   {label:'白色・点滅', text:'設定3・5示唆'},
   {label:'水色・点灯', text:'高設定示唆（弱）'},
@@ -566,6 +593,7 @@ const LAMP_B_OPTIONS = [
   {label:'金色・点灯', text:'設定6濃厚'}
 ];
 const LAMP_C_OPTIONS = [
+  {label:'消灯', text:'判断不能（消灯時は示唆なし）'},
   {label:'水色・点灯', text:'早い初当たり示唆（弱）'},
   {label:'黄緑・点灯', text:'早い初当たり示唆（中）'},
   {label:'金色・点灯', text:'早い初当たり示唆（強）'}
@@ -579,7 +607,8 @@ const STORAGE_KEY_TOTALG = 'hokuto_tensei2_total_g_v1';
 const STORAGE_KEY_SHOUBU = 'hokuto_tensei2_shoubu_v1';
 const STORAGE_KEY_EXCHANGE = 'hokuto_tensei2_exchange_v1';
 const STORAGE_KEY_BALANCE = 'hokuto_tensei2_balance_v1';
-const STORAGE_KEY_INVESTMENT = 'hokuto_tensei2_investment_v1';
+const STORAGE_KEY_INVESTMENT_YEN = 'hokuto_tensei2_investment_yen_v1';
+const STORAGE_KEY_MEDAL_RATE = 'hokuto_tensei2_medal_rate_v1';
 const STORAGE_KEY_KOYAKU = 'hokuto_tensei2_koyaku_v1';
 const STORAGE_KEY_SESSIONS = 'hokuto_tensei2_sessions_v1';
 const STORAGE_KEY_TENPA = 'hokuto_tensei2_tenpa_count_v1';
@@ -672,15 +701,28 @@ function recomputeBalance(){
   const manualTotalG = loadTotalG();
   const estimatedTotalG = history.reduce((sum, e) => sum + e.g, 0) + loadCurrentG();
   const totalG = manualTotalG || estimatedTotalG;
-  saveBalance(loadInvestment() + totalPayout + loadKoyaku() - totalG * COST_PER_GAME);
+  saveBalance(loadInvestmentMedals() + totalPayout + loadKoyaku() - totalG * COST_PER_GAME);
 }
-function loadInvestment(){
-  const raw = localStorage.getItem(STORAGE_KEY_INVESTMENT);
+function loadInvestmentYen(){
+  const raw = localStorage.getItem(STORAGE_KEY_INVESTMENT_YEN);
   const v = parseInt(raw, 10);
   return Number.isFinite(v) && v >= 0 ? v : 0;
 }
-function saveInvestment(v){
-  localStorage.setItem(STORAGE_KEY_INVESTMENT, String(Math.max(0, v)));
+function saveInvestmentYen(v){
+  localStorage.setItem(STORAGE_KEY_INVESTMENT_YEN, String(Math.max(0, v)));
+}
+function loadMedalRate(){
+  return localStorage.getItem(STORAGE_KEY_MEDAL_RATE) === '20' ? 20 : 10;
+}
+function saveMedalRate(rate){
+  localStorage.setItem(STORAGE_KEY_MEDAL_RATE, rate === 20 ? '20' : '10');
+}
+function loadInvestmentMedals(){
+  return Math.round(loadInvestmentYen() / loadMedalRate());
+}
+// 互換用: 差枚数計算に使う「投資額（枚）」。呼び出し側は loadInvestmentMedals() のエイリアスとして使う。
+function loadInvestment(){
+  return loadInvestmentMedals();
 }
 function loadKoyaku(){
   const raw = localStorage.getItem(STORAGE_KEY_KOYAKU);
@@ -988,10 +1030,17 @@ function render(){
   document.getElementById('qsState').textContent = `${MODE_LABEL[bestMode]} ${(bestVal * 100).toFixed(0)}%`;
 
   const yamePctVal = live.post.A;
-  const inputInvestment = document.getElementById('inputInvestment');
-  if(document.activeElement !== inputInvestment){
-    inputInvestment.value = loadInvestment() || '';
+  const inputInvestmentYen = document.getElementById('inputInvestmentYen');
+  if(document.activeElement !== inputInvestmentYen){
+    inputInvestmentYen.value = loadInvestmentYen() || '';
   }
+  const chkMedalRate20 = document.getElementById('chkMedalRate20');
+  if(document.activeElement !== chkMedalRate20){
+    chkMedalRate20.checked = loadMedalRate() === 20;
+  }
+  const medalRate = loadMedalRate();
+  document.getElementById('investmentYenInfo').textContent =
+    `${loadInvestmentYen().toLocaleString()}円 ÷ ${medalRate}円 = 約${loadInvestmentMedals().toLocaleString()}枚として計算します。`;
   const inputBalance = document.getElementById('inputBalance');
   const balance = loadBalance();
   if(document.activeElement !== inputBalance){
@@ -1050,7 +1099,7 @@ function render(){
   const totalPayoutSoFar = payoutSamples.reduce((a, b) => a + b, 0);
   const koyakuAdjustSoFar = loadKoyaku();
   document.getElementById('balanceInfo').innerHTML =
-    `現在の所有枚数: <b>${balance >= 0 ? '+' : ''}${balance}枚</b>（投資${loadInvestment()}枚 ＋ 獲得${totalPayoutSoFar}枚` +
+    `現在の所有枚数: <b>${balance >= 0 ? '+' : ''}${balance}枚</b>（投資${loadInvestmentYen().toLocaleString()}円=${loadInvestmentMedals()}枚 ＋ 獲得${totalPayoutSoFar}枚` +
     (koyakuAdjustSoFar !== 0 ? ` ＋ 子役調整${koyakuAdjustSoFar >= 0 ? '+' : ''}${koyakuAdjustSoFar}枚` : '') +
     ` − 消費${(loadTotalG() || (history.reduce((s,e)=>s+e.g,0)+currentG)) * COST_PER_GAME}枚）<br>` +
     `期待当選までの追加投資目安: 約${investToExpected}枚（${COST_PER_GAME}枚/G想定）<br>` +
@@ -1115,7 +1164,7 @@ function render(){
   }
   document.getElementById('totalGStatus').textContent = manualTotalG
     ? `✓ 登録済み: ${manualTotalG}G（⑦設定判別で使用中）`
-    : '実機のG数カウンター（あべしとは別の、リセットされない累計値）です。登録すると⑦設定判別に使われます。';
+    : '';
   const estimatedTotalG = history.reduce((sum, e) => sum + e.g, 0) + currentG;
   const totalGames = manualTotalG || estimatedTotalG;
   const hitCount = history.length;
@@ -1328,9 +1377,14 @@ document.getElementById('inputBalance').addEventListener('input', (e) => {
   render();
 });
 
-document.getElementById('inputInvestment').addEventListener('input', (e) => {
+document.getElementById('inputInvestmentYen').addEventListener('input', (e) => {
   const v = parseInt(e.target.value, 10);
-  saveInvestment(Number.isFinite(v) && v >= 0 ? v : 0);
+  saveInvestmentYen(Number.isFinite(v) && v >= 0 ? v : 0);
+  recomputeBalance();
+  render();
+});
+document.getElementById('chkMedalRate20').addEventListener('change', (e) => {
+  saveMedalRate(e.target.checked ? 20 : 10);
   recomputeBalance();
   render();
 });
@@ -1424,7 +1478,8 @@ document.getElementById('btnClear').addEventListener('click', () => {
   localStorage.removeItem(STORAGE_KEY_SHOUBU);
   localStorage.removeItem(STORAGE_KEY_BALANCE);
   localStorage.removeItem(STORAGE_KEY_TENPA);
-  localStorage.removeItem(STORAGE_KEY_INVESTMENT);
+  localStorage.removeItem(STORAGE_KEY_INVESTMENT_YEN);
+  localStorage.removeItem(STORAGE_KEY_MEDAL_RATE);
   localStorage.removeItem(STORAGE_KEY_KOYAKU);
   render();
 });
