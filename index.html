@@ -260,6 +260,10 @@
       <button class="btn-sub" id="btnTotalGRegister" style="flex:0 0 auto;">登録</button>
     </div>
     <div class="hint" id="totalGStatus">実機のG数カウンター（あべしとは別の、リセットされない累計値）です。登録すると⑦設定判別に使われます。</div>
+    <div class="row" style="margin-top:8px;">
+      <input type="number" id="inputKoyakuAdjust" placeholder="子役獲得枚数の追加分（任意）">
+    </div>
+    <div class="hint">小役（子役）の払い出しは自動集計できないため、実機の差枚表示とズレていたらここに差分を入力し、「登録」で①のG数と一緒に反映してください。</div>
 
     <div class="row" style="margin-top:14px;align-items:center;">
       <span style="font-size:0.82rem;color:var(--sub);flex:1;">天破の刻 突入回数</span>
@@ -474,6 +478,7 @@
     <h3>獲得枚数を入力</h3>
     <div class="hint"><span id="modalG">0</span>Gでのあべし成立を記録します。今回のAT・ボーナスで獲得した枚数を入力してください（あとから履歴で編集も可能です）。</div>
     <input type="number" id="modalPayoutInput" placeholder="獲得枚数（未入力でも記録できます）">
+    <input type="number" id="modalKoyakuInput" placeholder="子役獲得枚数の追加分（任意）" style="margin-top:10px;">
     <div class="row" style="margin-top:14px;">
       <button class="btn-sub" id="btnPayoutCancel" style="flex:1;">キャンセル</button>
       <button class="btn-gold" id="btnPayoutConfirm" style="flex:1;">記録してリセット</button>
@@ -566,6 +571,7 @@ const STORAGE_KEY_SHOUBU = 'hokuto_tensei2_shoubu_v1';
 const STORAGE_KEY_EXCHANGE = 'hokuto_tensei2_exchange_v1';
 const STORAGE_KEY_BALANCE = 'hokuto_tensei2_balance_v1';
 const STORAGE_KEY_INVESTMENT = 'hokuto_tensei2_investment_v1';
+const STORAGE_KEY_KOYAKU = 'hokuto_tensei2_koyaku_v1';
 const STORAGE_KEY_TENPA = 'hokuto_tensei2_tenpa_count_v1';
 const COST_PER_GAME = 3; // 1Gあたりの消化枚数（通常3枚/G想定）
 const BALANCE_DANGER = -1500; // この差枚数を下回るとモード確率が高くなくても「やめ時濃厚」寄りに
@@ -648,14 +654,15 @@ function saveTotalG(g){
   if(g === null){ localStorage.removeItem(STORAGE_KEY_TOTALG); }
   else { localStorage.setItem(STORAGE_KEY_TOTALG, String(g)); }
 }
-// 所有枚数 = 投資額（手動入力） + 獲得枚数の合計 − 消費枚数（①の「現在のG数」×3枚。未登録なら履歴からの概算G数を使う）。
+// 所有枚数 = 投資額（手動入力） + 獲得枚数の合計（AT/ボーナス） + 子役獲得枚数の調整分（手動）
+//          − 消費枚数（①の「現在のG数」×3枚。未登録なら履歴からの概算G数を使う）。
 function recomputeBalance(){
   const history = loadHistory();
   const totalPayout = history.reduce((sum, e) => sum + (e.payout || 0), 0);
   const manualTotalG = loadTotalG();
   const estimatedTotalG = history.reduce((sum, e) => sum + e.g, 0) + loadCurrentG();
   const totalG = manualTotalG || estimatedTotalG;
-  saveBalance(loadInvestment() + totalPayout - totalG * COST_PER_GAME);
+  saveBalance(loadInvestment() + totalPayout + loadKoyaku() - totalG * COST_PER_GAME);
 }
 function loadInvestment(){
   const raw = localStorage.getItem(STORAGE_KEY_INVESTMENT);
@@ -664,6 +671,15 @@ function loadInvestment(){
 }
 function saveInvestment(v){
   localStorage.setItem(STORAGE_KEY_INVESTMENT, String(Math.max(0, v)));
+}
+function loadKoyaku(){
+  const raw = localStorage.getItem(STORAGE_KEY_KOYAKU);
+  const v = parseInt(raw, 10);
+  return Number.isFinite(v) ? v : 0;
+}
+function addKoyaku(delta){
+  if(!Number.isFinite(delta) || delta === 0) return;
+  localStorage.setItem(STORAGE_KEY_KOYAKU, String(loadKoyaku() + delta));
 }
 function loadShoubu(){
   return localStorage.getItem(STORAGE_KEY_SHOUBU) === '1';
@@ -962,8 +978,11 @@ function render(){
   document.getElementById('yameExpected').textContent =
     `続行した場合の残り期待ゲーム数の目安: 約${Math.round(expG)}G（攻略サイト情報では、⑥第1区間48G付近でノーヒットの場合のヤメ目安として期待値104〜105%程度という情報もあります）`;
   const totalPayoutSoFar = payoutSamples.reduce((a, b) => a + b, 0);
+  const koyakuAdjustSoFar = loadKoyaku();
   document.getElementById('balanceInfo').innerHTML =
-    `現在の所有枚数: <b>${balance >= 0 ? '+' : ''}${balance}枚</b>（投資${loadInvestment()}枚 ＋ 獲得${totalPayoutSoFar}枚 − 消費${(loadTotalG() || (history.reduce((s,e)=>s+e.g,0)+currentG)) * COST_PER_GAME}枚）<br>` +
+    `現在の所有枚数: <b>${balance >= 0 ? '+' : ''}${balance}枚</b>（投資${loadInvestment()}枚 ＋ 獲得${totalPayoutSoFar}枚` +
+    (koyakuAdjustSoFar !== 0 ? ` ＋ 子役調整${koyakuAdjustSoFar >= 0 ? '+' : ''}${koyakuAdjustSoFar}枚` : '') +
+    ` − 消費${(loadTotalG() || (history.reduce((s,e)=>s+e.g,0)+currentG)) * COST_PER_GAME}枚）<br>` +
     `期待当選までの追加投資目安: 約${investToExpected}枚（${COST_PER_GAME}枚/G想定）<br>` +
     `天井到達までの追加投資目安（最大）: 約${investToTenjou}枚` +
     (avgPayout != null ? `<br>これまでの平均獲得枚数: 約${Math.round(avgPayout)}枚（${payoutSamples.length}件）` : '');
@@ -1193,6 +1212,9 @@ document.getElementById('chkSettingChange').addEventListener('change', (e) => {
 document.getElementById('btnTotalGRegister').addEventListener('click', () => {
   const g = parseInt(document.getElementById('inputTotalG').value, 10);
   saveTotalG(Number.isFinite(g) && g > 0 ? g : null);
+  const koyakuInput = document.getElementById('inputKoyakuAdjust');
+  addKoyaku(parseInt(koyakuInput.value, 10));
+  koyakuInput.value = '';
   recomputeBalance();
   render();
 });
@@ -1228,6 +1250,7 @@ document.getElementById('btnRegister').addEventListener('click', () => {
   if(currentG < 1){ inputCurrentG.focus(); return; }
   document.getElementById('modalG').textContent = currentG;
   modalPayoutInput.value = '';
+  document.getElementById('modalKoyakuInput').value = '';
   payoutModalOverlay.style.display = 'flex';
   modalPayoutInput.focus();
 });
@@ -1243,6 +1266,7 @@ function confirmPayoutModal(){
   const history = loadHistory();
   history.push({g: currentG, ts: Date.now(), payout});
   saveHistory(history);
+  addKoyaku(parseInt(document.getElementById('modalKoyakuInput').value, 10));
   saveCurrentG(0);
   saveTanpatsu(0);
   saveOmen(null);
@@ -1309,6 +1333,7 @@ document.getElementById('btnClear').addEventListener('click', () => {
   localStorage.removeItem(STORAGE_KEY_BALANCE);
   localStorage.removeItem(STORAGE_KEY_TENPA);
   localStorage.removeItem(STORAGE_KEY_INVESTMENT);
+  localStorage.removeItem(STORAGE_KEY_KOYAKU);
   render();
 });
 
