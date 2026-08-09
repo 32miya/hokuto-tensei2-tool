@@ -313,9 +313,9 @@
 
     <label class="toggle-row">
       <input type="checkbox" id="chkSettingChange">
-      本日の1G目から打っている（設定変更の可能性あり・天井短縮）
+      実際に設定変更があったと思われる（天井短縮）
     </label>
-    <details class="hint-toggle"><summary></summary><p>短縮天井は最初の1サイクルのみ有効なため、あべし成立を記録すると自動でチェックが外れ、通常の天井に戻ります。</p></details>
+    <details class="hint-toggle"><summary></summary><p>電源の入れ直し（リセット）だけでは天井G数・内部状態・有利区間は引き継がれ、短縮されません。短縮天井が働くのは実際に設定変更があった場合のみです。「今日の1G目から打っている」というだけではチェックしないでください。短縮天井は最初の1サイクルのみ有効なため、あべし成立を記録すると自動でチェックが外れ、通常の天井に戻ります。</p></details>
   </div>
 
   <div class="card">
@@ -426,6 +426,15 @@
     <p><b>AT終了後のヤメ時</b>：基本は即ヤメ。余裕があれば128あべしまでフォロー（天国濃厚）、余剰分が多ければ256あべしまでフォロー（ゾーン対象）。天撃失敗後は天国濃厚のため、必ずAT当選まで続行すべき。</p>
   </details>
 
+  <details class="card" style="margin-bottom:14px;">
+    <summary>AT中のバトル・演出について（参考情報・通常時の判断には未使用）</summary>
+    <p style="color:var(--sub);">このツールは主に通常時（AT当選前）のモード予想を目的としているため、以下はAT当選後の参考情報として記載するのみで、③④⑤⑦などの計算には組み込んでいません。</p>
+    <p><b>闘神演舞［AT］</b>：初期30G/セット、純増約4.0枚/G。セット開始時の闘神レベル（A〜D）ごとに勝舞魂の獲得しやすさ・奥義発動率・上乗せ個数の振り分けが異なります。百裂カットイン出現率1/1236.5、神拳BAR揃い1/1927.5（このとき期待度64.2%）。</p>
+    <p><b>神拳勝舞［継続バトル］</b>：1戦あたりの勝利期待度は約1/5、純増約4.0枚/G。継続ゲーム数＝勝舞魂の所持数に依存。対戦する敵キャラによってトータル勝率が大きく異なり（シン8.8%〜ジャギ88.3%）、レイ・トキ登場は勝利濃厚とされています。</p>
+    <p><b>SPバトル特闘／EXバトル極闘</b>：特闘の継続率は77%・80%・90%の3種類があり、特闘後に極闘へ進むと継続率90%濃厚。極闘は90%ループのみで、1回の継続は9G。</p>
+    <p><b>天破の刻の突入率（内部状態・成立役別、通常時の参考値）</b>：低確滞在時は弱チェリー/スイカ成立で0.8〜4.7%（設定1→6）、チャンス目/勝舞揃いで2.0〜6.3%。高確滞在時は全設定共通でスイカ31.3%・弱チェリー66.4%・チャンス目以上100%。強チェリーは内部状態を問わず25.0%、確定チェリーは100%。ただし「今どの内部状態にいるか」自体が観測できないため、このツールの⑦設定判別には現状組み込んでいません。</p>
+  </details>
+
   <div class="card">
     <h2>⑦ 設定判別（AT初当たり確率＋天破の刻）</h2>
     <div class="hist-stats" id="settingStats"></div>
@@ -512,10 +521,15 @@
     データ出典: <a href="https://p-town.dmm.com/machines/4909" target="_blank" rel="noopener">p-town.dmm.com</a>（規定あべし振り分け・設定1）、
     <a href="https://nana-press.com/kaiseki/machine/1059/33039/" target="_blank" rel="noopener">nana-press.com</a>（モード移行率・設定差）、
     <a href="https://note.com/norihey_01/n/ne90cfaa4f7d9" target="_blank" rel="noopener">note.com/norihey_01</a>（ゾーン外プレ前兆）、
-    <a href="https://1geki.jp/slot/l_hokuto_tensei2/0/" target="_blank" rel="noopener">1geki.jp</a>（AT初当たり確率・設定1〜6）、
+    <a href="https://1geki.jp/slot/l_hokuto_tensei2/0/" target="_blank" rel="noopener">1geki.jp</a>（AT初当たり確率・設定1〜6・設定判別まとめ）、
     <a href="https://nana-press.com/kaiseki/machine/1059/33018/" target="_blank" rel="noopener">nana-press.com</a>（天井恩恵・発動条件・期待値・狙い目・ヤメ時）、
     <a href="https://slomiru.com/hokuto_tensei2" target="_blank" rel="noopener">slomiru.com</a>（天破の刻突入率・設定1〜6）、
-    <a href="https://1geki.jp/slot/l_hokuto_tensei2/53/" target="_blank" rel="noopener">1geki.jp</a>（ランプA/B/C示唆・小役LED色示唆）
+    <a href="https://1geki.jp/slot/l_hokuto_tensei2/53/" target="_blank" rel="noopener">1geki.jp</a>（ランプA/B/C示唆・小役LED色示唆）、
+    <a href="https://1geki.jp/slot/l_hokuto_tensei2/3/" target="_blank" rel="noopener">1geki.jp</a>（天井リセット仕様）、
+    <a href="https://1geki.jp/slot/l_hokuto_tensei2/44/" target="_blank" rel="noopener">1geki.jp</a>（天破の刻突入率・内部状態別）、
+    <a href="https://1geki.jp/slot/l_hokuto_tensei2/81/" target="_blank" rel="noopener">1geki.jp</a>（闘神演舞AT）、
+    <a href="https://1geki.jp/slot/l_hokuto_tensei2/83/" target="_blank" rel="noopener">1geki.jp</a>（継続バトル）、
+    <a href="https://1geki.jp/slot/l_hokuto_tensei2/89/" target="_blank" rel="noopener">1geki.jp</a>（特闘・極闘）
   </footer>
 </div>
 
