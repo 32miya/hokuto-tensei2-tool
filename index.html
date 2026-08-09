@@ -259,11 +259,7 @@
       <input type="number" id="inputTotalG" inputmode="numeric" placeholder="現在のG数（台の累計・リセットなし）" min="0">
       <button class="btn-sub" id="btnTotalGRegister" style="flex:0 0 auto;">登録</button>
     </div>
-    <div class="hint" id="totalGStatus">実機のG数カウンター（あべしとは別の、リセットされない累計値）です。登録すると⑦設定判別に使われます。</div>
-    <div class="row" style="margin-top:8px;">
-      <input type="number" id="inputKoyakuAdjust" placeholder="子役獲得枚数の追加分（任意）">
-    </div>
-    <div class="hint">小役（子役）の払い出しは自動集計できないため、実機の差枚表示とズレていたらここに差分を入力し、「登録」で①のG数と一緒に反映してください。</div>
+    <div class="hint" id="totalGStatus">実機のG数カウンター（あべしとは別の、リセットされない累計値）です。登録すると⑦設定判別に使われます。登録時に所持枚数の確認ウィンドウが開きます。</div>
 
     <div class="row" style="margin-top:14px;align-items:center;">
       <span style="font-size:0.82rem;color:var(--sub);flex:1;">天破の刻 突入回数</span>
@@ -478,10 +474,21 @@
     <h3>獲得枚数を入力</h3>
     <div class="hint"><span id="modalG">0</span>Gでのあべし成立を記録します。今回のAT・ボーナスで獲得した枚数を入力してください（あとから履歴で編集も可能です）。</div>
     <input type="number" id="modalPayoutInput" placeholder="獲得枚数（未入力でも記録できます）">
-    <input type="number" id="modalKoyakuInput" placeholder="子役獲得枚数の追加分（任意）" style="margin-top:10px;">
     <div class="row" style="margin-top:14px;">
       <button class="btn-sub" id="btnPayoutCancel" style="flex:1;">キャンセル</button>
       <button class="btn-gold" id="btnPayoutConfirm" style="flex:1;">記録してリセット</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="holdingsModalOverlay" style="display:none;">
+  <div class="modal-box">
+    <h3>所持枚数を入力</h3>
+    <div class="hint">実機に表示されている、現在の所持枚数（クレジット表示等）をそのまま入力してください。小役分も含めた実際の枚数に、差枚数の計算を自動で合わせ込みます。</div>
+    <input type="number" id="modalHoldingsInput" placeholder="現在の所持枚数">
+    <div class="row" style="margin-top:14px;">
+      <button class="btn-sub" id="btnHoldingsSkip" style="flex:1;">入力しない</button>
+      <button class="btn-gold" id="btnHoldingsConfirm" style="flex:1;">合わせ込む</button>
     </div>
   </div>
 </div>
@@ -680,6 +687,16 @@ function loadKoyaku(){
 function addKoyaku(delta){
   if(!Number.isFinite(delta) || delta === 0) return;
   localStorage.setItem(STORAGE_KEY_KOYAKU, String(loadKoyaku() + delta));
+}
+// 実機で確認した「現在の所持枚数」と一致するように、子役調整分を逆算してセットする。
+function calibrateKoyakuToHoldings(targetHoldings){
+  const history = loadHistory();
+  const totalPayout = history.reduce((sum, e) => sum + (e.payout || 0), 0);
+  const manualTotalG = loadTotalG();
+  const estimatedTotalG = history.reduce((sum, e) => sum + e.g, 0) + loadCurrentG();
+  const totalG = manualTotalG || estimatedTotalG;
+  const neededKoyaku = targetHoldings - loadInvestment() - totalPayout + totalG * COST_PER_GAME;
+  localStorage.setItem(STORAGE_KEY_KOYAKU, String(neededKoyaku));
 }
 function loadShoubu(){
   return localStorage.getItem(STORAGE_KEY_SHOUBU) === '1';
@@ -1212,11 +1229,34 @@ document.getElementById('chkSettingChange').addEventListener('change', (e) => {
 document.getElementById('btnTotalGRegister').addEventListener('click', () => {
   const g = parseInt(document.getElementById('inputTotalG').value, 10);
   saveTotalG(Number.isFinite(g) && g > 0 ? g : null);
-  const koyakuInput = document.getElementById('inputKoyakuAdjust');
-  addKoyaku(parseInt(koyakuInput.value, 10));
-  koyakuInput.value = '';
   recomputeBalance();
   render();
+  const modalHoldingsInput = document.getElementById('modalHoldingsInput');
+  modalHoldingsInput.value = '';
+  document.getElementById('holdingsModalOverlay').style.display = 'flex';
+  modalHoldingsInput.focus();
+});
+
+const holdingsModalOverlay = document.getElementById('holdingsModalOverlay');
+function closeHoldingsModal(){
+  holdingsModalOverlay.style.display = 'none';
+}
+function confirmHoldingsModal(){
+  const v = parseInt(document.getElementById('modalHoldingsInput').value, 10);
+  if(Number.isFinite(v)){
+    calibrateKoyakuToHoldings(v);
+    recomputeBalance();
+    render();
+  }
+  closeHoldingsModal();
+}
+document.getElementById('btnHoldingsConfirm').addEventListener('click', confirmHoldingsModal);
+document.getElementById('btnHoldingsSkip').addEventListener('click', closeHoldingsModal);
+holdingsModalOverlay.addEventListener('click', (e) => {
+  if(e.target === holdingsModalOverlay) closeHoldingsModal();
+});
+document.getElementById('modalHoldingsInput').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') confirmHoldingsModal();
 });
 
 document.getElementById('chkShoubuDamashii').addEventListener('change', (e) => {
@@ -1250,7 +1290,6 @@ document.getElementById('btnRegister').addEventListener('click', () => {
   if(currentG < 1){ inputCurrentG.focus(); return; }
   document.getElementById('modalG').textContent = currentG;
   modalPayoutInput.value = '';
-  document.getElementById('modalKoyakuInput').value = '';
   payoutModalOverlay.style.display = 'flex';
   modalPayoutInput.focus();
 });
@@ -1266,7 +1305,6 @@ function confirmPayoutModal(){
   const history = loadHistory();
   history.push({g: currentG, ts: Date.now(), payout});
   saveHistory(history);
-  addKoyaku(parseInt(document.getElementById('modalKoyakuInput').value, 10));
   saveCurrentG(0);
   saveTanpatsu(0);
   saveOmen(null);
