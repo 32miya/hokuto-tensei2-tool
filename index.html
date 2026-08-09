@@ -351,7 +351,7 @@
     <div class="row" style="margin-top:12px;">
       <input type="number" id="inputBalance" placeholder="現在の差枚数（マイナスも入力可）">
     </div>
-    <div class="hint">あべし成立を記録するたび、そのサイクルの消費枚数（G数×3枚）を差し引き、入力した獲得枚数を足して自動更新します。手動で書き換えても構いません。</div>
+    <div class="hint">①「現在のG数」（台の累計値）×3枚を消費枚数とし、これまでの獲得枚数合計から差し引いて自動計算します（G数未登録の場合はあべし履歴からの概算G数を使用）。G数の登録や獲得枚数の入力・編集のたびに再計算されます。手動で書き換えても構いません。</div>
     <div class="hint" id="balanceInfo"></div>
     <div class="hint">576G＝モードC消滅、896G＝モードB消滅（以降モードA確定）という実際の壁に沿って「やめ時濃厚」ゾーンを判定し、天井が十分近づいたら「天井狙い推奨」に切り替えます（獲得枚数の記録があればそこから計算した平均獲得枚数、なければ天井の80%地点を目安に使用）。差枚数が大きくマイナスの場合はそれより早く「やめ時濃厚」を出します。</div>
   </div>
@@ -643,6 +643,15 @@ function loadTotalG(){
 function saveTotalG(g){
   if(g === null){ localStorage.removeItem(STORAGE_KEY_TOTALG); }
   else { localStorage.setItem(STORAGE_KEY_TOTALG, String(g)); }
+}
+// 差枚数 = 獲得枚数の合計 − 消費枚数（①の「現在のG数」×3枚。未登録なら履歴からの概算G数を使う）。
+function recomputeBalance(){
+  const history = loadHistory();
+  const totalPayout = history.reduce((sum, e) => sum + (e.payout || 0), 0);
+  const manualTotalG = loadTotalG();
+  const estimatedTotalG = history.reduce((sum, e) => sum + e.g, 0) + loadCurrentG();
+  const totalG = manualTotalG || estimatedTotalG;
+  saveBalance(totalPayout - totalG * COST_PER_GAME);
 }
 function loadShoubu(){
   return localStorage.getItem(STORAGE_KEY_SHOUBU) === '1';
@@ -1167,6 +1176,7 @@ document.getElementById('chkSettingChange').addEventListener('change', (e) => {
 document.getElementById('btnTotalGRegister').addEventListener('click', () => {
   const g = parseInt(document.getElementById('inputTotalG').value, 10);
   saveTotalG(Number.isFinite(g) && g > 0 ? g : null);
+  recomputeBalance();
   render();
 });
 
@@ -1209,13 +1219,12 @@ function confirmPayoutModal(){
   const history = loadHistory();
   history.push({g: currentG, ts: Date.now(), payout});
   saveHistory(history);
-  const consumed = currentG * COST_PER_GAME;
-  saveBalance(loadBalance() - consumed + (payout || 0));
   saveCurrentG(0);
   saveTanpatsu(0);
   saveOmen(null);
   saveShoubu(false);
   saveSetChange(false);
+  recomputeBalance();
   closePayoutModal();
   render();
 }
@@ -1246,10 +1255,9 @@ document.getElementById('historyList').addEventListener('click', (e) => {
   if(!btn) return;
   const idx = parseInt(btn.dataset.idx, 10);
   const history = loadHistory();
-  const removed = history[idx];
   history.splice(idx, 1);
   saveHistory(history);
-  saveBalance(loadBalance() - (removed.payout || 0) + removed.g * COST_PER_GAME);
+  recomputeBalance();
   render();
 });
 
@@ -1258,12 +1266,10 @@ document.getElementById('historyList').addEventListener('change', (e) => {
   if(!input) return;
   const idx = parseInt(input.dataset.idx, 10);
   const v = parseInt(input.value, 10);
-  const newPayout = Number.isFinite(v) ? v : null;
   const history = loadHistory();
-  const oldPayout = history[idx].payout || 0;
-  history[idx].payout = newPayout;
+  history[idx].payout = Number.isFinite(v) ? v : null;
   saveHistory(history);
-  saveBalance(loadBalance() + ((newPayout || 0) - oldPayout));
+  recomputeBalance();
   render();
 });
 
