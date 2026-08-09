@@ -349,9 +349,12 @@
     <div class="hint" id="yameExpected"></div>
     <div class="best-tag" id="nextHotRange" style="margin-top:10px;display:block;"></div>
     <div class="row" style="margin-top:12px;">
+      <input type="number" id="inputInvestment" placeholder="投資額（クレジット追加等の合計枚数）" min="0">
+    </div>
+    <div class="row" style="margin-top:8px;">
       <input type="number" id="inputBalance" placeholder="現在の差枚数（マイナスも入力可）">
     </div>
-    <div class="hint">①「現在のG数」（台の累計値）×3枚を消費枚数とし、これまでの獲得枚数合計から差し引いて自動計算します（G数未登録の場合はあべし履歴からの概算G数を使用）。G数の登録や獲得枚数の入力・編集のたびに再計算されます。手動で書き換えても構いません。</div>
+    <div class="hint">所有枚数 = 投資額 + 獲得枚数合計 − （①「現在のG数」×3枚）で自動計算します（G数未登録の場合はあべし履歴からの概算G数を使用）。投資額を追加した時・G数の登録時・獲得枚数の入力/編集時に再計算されます。差枚数欄は手動で書き換えても構いません。</div>
     <div class="hint" id="balanceInfo"></div>
     <div class="hint">576G＝モードC消滅、896G＝モードB消滅（以降モードA確定）という実際の壁に沿って「やめ時濃厚」ゾーンを判定し、天井が十分近づいたら「天井狙い推奨」に切り替えます（獲得枚数の記録があればそこから計算した平均獲得枚数、なければ天井の80%地点を目安に使用）。差枚数が大きくマイナスの場合はそれより早く「やめ時濃厚」を出します。</div>
   </div>
@@ -562,6 +565,7 @@ const STORAGE_KEY_TOTALG = 'hokuto_tensei2_total_g_v1';
 const STORAGE_KEY_SHOUBU = 'hokuto_tensei2_shoubu_v1';
 const STORAGE_KEY_EXCHANGE = 'hokuto_tensei2_exchange_v1';
 const STORAGE_KEY_BALANCE = 'hokuto_tensei2_balance_v1';
+const STORAGE_KEY_INVESTMENT = 'hokuto_tensei2_investment_v1';
 const STORAGE_KEY_TENPA = 'hokuto_tensei2_tenpa_count_v1';
 const COST_PER_GAME = 3; // 1Gあたりの消化枚数（通常3枚/G想定）
 const BALANCE_DANGER = -1500; // この差枚数を下回るとモード確率が高くなくても「やめ時濃厚」寄りに
@@ -644,14 +648,22 @@ function saveTotalG(g){
   if(g === null){ localStorage.removeItem(STORAGE_KEY_TOTALG); }
   else { localStorage.setItem(STORAGE_KEY_TOTALG, String(g)); }
 }
-// 差枚数 = 獲得枚数の合計 − 消費枚数（①の「現在のG数」×3枚。未登録なら履歴からの概算G数を使う）。
+// 所有枚数 = 投資額（手動入力） + 獲得枚数の合計 − 消費枚数（①の「現在のG数」×3枚。未登録なら履歴からの概算G数を使う）。
 function recomputeBalance(){
   const history = loadHistory();
   const totalPayout = history.reduce((sum, e) => sum + (e.payout || 0), 0);
   const manualTotalG = loadTotalG();
   const estimatedTotalG = history.reduce((sum, e) => sum + e.g, 0) + loadCurrentG();
   const totalG = manualTotalG || estimatedTotalG;
-  saveBalance(totalPayout - totalG * COST_PER_GAME);
+  saveBalance(loadInvestment() + totalPayout - totalG * COST_PER_GAME);
+}
+function loadInvestment(){
+  const raw = localStorage.getItem(STORAGE_KEY_INVESTMENT);
+  const v = parseInt(raw, 10);
+  return Number.isFinite(v) && v >= 0 ? v : 0;
+}
+function saveInvestment(v){
+  localStorage.setItem(STORAGE_KEY_INVESTMENT, String(Math.max(0, v)));
 }
 function loadShoubu(){
   return localStorage.getItem(STORAGE_KEY_SHOUBU) === '1';
@@ -890,6 +902,10 @@ function render(){
   document.getElementById('qsState').textContent = `${MODE_LABEL[bestMode]} ${(bestVal * 100).toFixed(0)}%`;
 
   const yamePctVal = live.post.A;
+  const inputInvestment = document.getElementById('inputInvestment');
+  if(document.activeElement !== inputInvestment){
+    inputInvestment.value = loadInvestment() || '';
+  }
   const inputBalance = document.getElementById('inputBalance');
   const balance = loadBalance();
   if(document.activeElement !== inputBalance){
@@ -945,8 +961,9 @@ function render(){
   qsYame.className = 'qs-value ' + yameColor;
   document.getElementById('yameExpected').textContent =
     `続行した場合の残り期待ゲーム数の目安: 約${Math.round(expG)}G（攻略サイト情報では、⑥第1区間48G付近でノーヒットの場合のヤメ目安として期待値104〜105%程度という情報もあります）`;
+  const totalPayoutSoFar = payoutSamples.reduce((a, b) => a + b, 0);
   document.getElementById('balanceInfo').innerHTML =
-    `現在の差枚数: <b>${balance >= 0 ? '+' : ''}${balance}枚</b><br>` +
+    `現在の所有枚数: <b>${balance >= 0 ? '+' : ''}${balance}枚</b>（投資${loadInvestment()}枚 ＋ 獲得${totalPayoutSoFar}枚 − 消費${(loadTotalG() || (history.reduce((s,e)=>s+e.g,0)+currentG)) * COST_PER_GAME}枚）<br>` +
     `期待当選までの追加投資目安: 約${investToExpected}枚（${COST_PER_GAME}枚/G想定）<br>` +
     `天井到達までの追加投資目安（最大）: 約${investToTenjou}枚` +
     (avgPayout != null ? `<br>これまでの平均獲得枚数: 約${Math.round(avgPayout)}枚（${payoutSamples.length}件）` : '');
@@ -1196,6 +1213,13 @@ document.getElementById('inputBalance').addEventListener('input', (e) => {
   render();
 });
 
+document.getElementById('inputInvestment').addEventListener('input', (e) => {
+  const v = parseInt(e.target.value, 10);
+  saveInvestment(Number.isFinite(v) && v >= 0 ? v : 0);
+  recomputeBalance();
+  render();
+});
+
 const payoutModalOverlay = document.getElementById('payoutModalOverlay');
 const modalPayoutInput = document.getElementById('modalPayoutInput');
 
@@ -1284,6 +1308,7 @@ document.getElementById('btnClear').addEventListener('click', () => {
   localStorage.removeItem(STORAGE_KEY_SHOUBU);
   localStorage.removeItem(STORAGE_KEY_BALANCE);
   localStorage.removeItem(STORAGE_KEY_TENPA);
+  localStorage.removeItem(STORAGE_KEY_INVESTMENT);
   render();
 });
 
