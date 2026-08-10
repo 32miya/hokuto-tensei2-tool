@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>収支管理データベース</title>
+<style>
+  :root{
+    --bg:#120608;
+    --panel:#1c0d10;
+    --panel2:#241014;
+    --red:#e2312a;
+    --red-dark:#8f1c17;
+    --gold:#e0a83c;
+    --text:#f2e6e2;
+    --sub:#b58e88;
+    --line:#3a1e1f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:radial-gradient(ellipse at top, #2a1013 0%, #120608 60%);
+    color:var(--text);
+    font-family:"Hiragino Sans","Yu Gothic",system-ui,-apple-system,sans-serif;
+    min-height:100vh;
+    padding:8px 12px 60px;
+  }
+  .wrap{max-width:640px;margin:0 auto;}
+  header{text-align:center;margin-bottom:8px;}
+  header h1{
+    font-size:1.1rem;margin:0 0 4px;
+    color:var(--gold);letter-spacing:0.02em;
+    text-shadow:0 0 10px rgba(224,168,60,0.35);
+  }
+  a.back-link{
+    display:inline-block;margin-bottom:10px;color:var(--sub);
+    font-size:0.8rem;text-decoration:none;border:1px solid var(--line);
+    border-radius:8px;padding:6px 12px;
+  }
+  .card{
+    background:linear-gradient(180deg,var(--panel2),var(--panel));
+    border:1px solid var(--line);border-radius:14px;
+    padding:14px;margin-bottom:12px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.35);
+  }
+  .card h2{font-size:0.9rem;margin:0 0 10px;color:var(--red);}
+  .empty{color:var(--sub);font-size:0.85rem;text-align:center;padding:16px 0;}
+  .hint{font-size:0.72rem;color:var(--sub);margin-top:6px;line-height:1.6;}
+
+  .row{display:flex;gap:8px;}
+  input[type=number], input[type=date], input[type=text], select{
+    flex:1;min-width:0;
+    background:#0e0506;border:1px solid var(--line);
+    color:var(--text);font-size:0.95rem;
+    padding:10px;border-radius:10px;
+  }
+  button{
+    border:none;border-radius:10px;font-size:0.9rem;font-weight:700;
+    padding:11px 16px;cursor:pointer;transition:transform .1s ease;
+  }
+  button:active{transform:scale(0.96);}
+  .btn-gold{background:linear-gradient(180deg,var(--gold),#a5761f);color:#241014;}
+  .btn-danger{
+    background:transparent;color:var(--red);border:1px solid var(--red-dark);
+    width:100%;margin-top:6px;
+  }
+  .btn-del{
+    background:transparent;border:1px solid var(--red-dark);color:var(--red);
+    border-radius:6px;width:26px;height:26px;padding:0;font-size:0.8rem;cursor:pointer;
+  }
+
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .summary-tile{
+    background:#0e0506;border:1px solid var(--line);border-radius:10px;
+    padding:10px;text-align:center;
+  }
+  .summary-tile .label{font-size:0.68rem;color:var(--sub);margin-bottom:4px;}
+  .summary-tile .value{font-size:1.1rem;font-weight:700;color:var(--text);}
+  .value.pos{color:#7fd68a;}
+  .value.neg{color:var(--red);}
+
+  .chart-card{position:relative;}
+  .chart-card svg{width:100%;height:auto;aspect-ratio:320/150;display:block;touch-action:none;cursor:crosshair;}
+  .chart-tooltip{
+    position:absolute;pointer-events:none;display:none;
+    background:#0e0506;border:1px solid var(--gold);border-radius:8px;
+    padding:6px 10px;font-size:0.72rem;color:var(--sub);line-height:1.5;
+    transform:translate(-50%,-115%);white-space:nowrap;z-index:2;
+  }
+  .chart-tooltip b{color:var(--gold);font-size:0.95rem;}
+
+  .machine-list{display:flex;flex-direction:column;gap:6px;}
+  .machine-row{
+    display:flex;align-items:center;gap:8px;
+    background:#0e0506;border:1px solid var(--line);border-radius:8px;
+    padding:8px 10px;font-size:0.85rem;
+  }
+  .machine-row .name{flex:1;font-weight:700;}
+  .machine-row .count{font-size:0.7rem;color:var(--sub);}
+  .machine-row .net{font-weight:700;font-variant-numeric:tabular-nums;}
+
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table.ledger-table{width:100%;border-collapse:collapse;font-size:0.8rem;white-space:nowrap;}
+  table.ledger-table th{
+    text-align:left;color:var(--sub);font-weight:400;font-size:0.7rem;
+    padding:6px 8px;border-bottom:1px solid var(--line);
+  }
+  table.ledger-table td{
+    padding:8px;border-bottom:1px solid var(--line);color:var(--text);
+  }
+  table.ledger-table td.num{font-variant-numeric:tabular-nums;text-align:right;}
+  table.ledger-table td.num.pos{color:#7fd68a;}
+  table.ledger-table td.num.neg{color:var(--red);}
+
+  footer{text-align:center;font-size:0.68rem;color:#6b4d49;margin-top:18px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="index.html" class="back-link">← 北斗の拳ツールへ</a>
+  <a href="history.html" class="back-link">📊 実績レポート</a>
+  <header>
+    <h1>収支管理データベース（全機種共通）</h1>
+  </header>
+
+  <div class="card">
+    <h2>通算収支サマリー</h2>
+    <div class="summary-grid" id="summaryGrid"></div>
+  </div>
+
+  <div class="card chart-card" id="chartCardWrap" style="display:none;">
+    <h2>収益推移グラフ（累積）</h2>
+    <svg id="ledgerChart" viewBox="0 0 320 150"></svg>
+    <div class="chart-tooltip" id="ledgerTooltip"></div>
+  </div>
+
+  <div class="card">
+    <h2>機種別成績（勝てる機種・負ける機種）</h2>
+    <div class="machine-list" id="machineList"></div>
+  </div>
+
+  <div class="card">
+    <h2>新規記録を追加</h2>
+    <div class="row">
+      <input type="date" id="ledgerDate">
+    </div>
+    <div class="row" style="margin-top:8px;">
+      <select id="ledgerMachineSelect">
+        <option value="北斗の拳">北斗の拳</option>
+        <option value="花火">花火</option>
+        <option value="ジャグラー">ジャグラー</option>
+        <option value="吉宗">吉宗</option>
+        <option value="__custom__">その他（自由入力）</option>
+      </select>
+    </div>
+    <div class="row" id="ledgerCustomRow" style="display:none;margin-top:8px;">
+      <input type="text" id="ledgerMachineCustom" placeholder="台の名前を入力">
+    </div>
+    <div class="row" style="margin-top:8px;">
+      <input type="number" id="ledgerGain" placeholder="増益額（円 or 枚）" min="0">
+      <input type="number" id="ledgerLoss" placeholder="減収額（円 or 枚）" min="0">
+    </div>
+    <div class="hint">増益額・減収額はどちらか一方だけの入力でも構いません。差引 = 増益額 − 減収額として集計します。単位（円／枚）は入力時にご自身で統一してください。</div>
+    <button class="btn-gold" id="btnLedgerAdd" style="width:100%;margin-top:10px;">追加</button>
+  </div>
+
+  <div class="card">
+    <h2>記録一覧（新しい順）</h2>
+    <div class="table-wrap">
+      <table class="ledger-table">
+        <thead>
+          <tr><th>日時</th><th>台の名前</th><th>増益額</th><th>減収額</th><th>差引</th><th></th></tr>
+        </thead>
+        <tbody id="ledgerBody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="ledgerEmpty" style="display:none;">まだ記録がありません</div>
+    <button class="btn-danger" id="btnLedgerClearAll">🗑 全記録を削除</button>
+  </div>
+
+  <footer>この端末のブラウザ（localStorage）に保存されたデータです。外部には送信されません。</footer>
+</div>
+
+<script>
+const STORAGE_KEY_LEDGER = 'pachislot_ledger_v1';
+
+function loadLedger(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY_LEDGER);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+function saveLedger(entries){
+  localStorage.setItem(STORAGE_KEY_LEDGER, JSON.stringify(entries));
+}
+function fmtSigned(n){
+  return (n >= 0 ? '+' : '') + n.toLocaleString();
+}
+function formatDate(dateStr){
+  const d = new Date(dateStr + 'T00:00:00');
+  if(isNaN(d.getTime())) return dateStr;
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`;
+}
+
+function render(){
+  const entries = loadLedger();
+  const sorted = entries.slice().sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+
+  const summaryGrid = document.getElementById('summaryGrid');
+  if(entries.length === 0){
+    summaryGrid.innerHTML = '<div class="empty" style="grid-column:1/3;">まだ記録がありません。下のフォームから追加してください。</div>';
+  } else {
+    const totalGain = entries.reduce((s, e) => s + e.gain, 0);
+    const totalLoss = entries.reduce((s, e) => s + e.loss, 0);
+    const net = totalGain - totalLoss;
+    const winDays = entries.filter(e => (e.gain - e.loss) > 0).length;
+    const winRate = (winDays / entries.length * 100).toFixed(0);
+    summaryGrid.innerHTML = `
+      <div class="summary-tile"><div class="label">累積収支額</div><div class="value ${net >= 0 ? 'pos' : 'neg'}">${fmtSigned(net)}</div></div>
+      <div class="summary-tile"><div class="label">記録件数</div><div class="value">${entries.length}件</div></div>
+      <div class="summary-tile"><div class="label">総増益額</div><div class="value pos">${totalGain.toLocaleString()}</div></div>
+      <div class="summary-tile"><div class="label">総減収額</div><div class="value neg">${totalLoss.toLocaleString()}</div></div>
+      <div class="summary-tile" style="grid-column:1/3;"><div class="label">プラス収支の割合</div><div class="value">${winRate}%（${winDays}/${entries.length}件）</div></div>
+    `;
+  }
+
+  const chartCardWrap = document.getElementById('chartCardWrap');
+  if(sorted.length >= 2){
+    chartCardWrap.style.display = 'block';
+    renderChart(sorted);
+  } else {
+    chartCardWrap.style.display = 'none';
+  }
+
+  const machineMap = {};
+  entries.forEach(e => {
+    if(!machineMap[e.machine]) machineMap[e.machine] = {net: 0, count: 0};
+    machineMap[e.machine].net += (e.gain - e.loss);
+    machineMap[e.machine].count += 1;
+  });
+  const machineList = document.getElementById('machineList');
+  const machineNames = Object.keys(machineMap).sort((a, b) => machineMap[b].net - machineMap[a].net);
+  if(machineNames.length === 0){
+    machineList.innerHTML = '<div class="empty">まだ記録がありません</div>';
+  } else {
+    machineList.innerHTML = machineNames.map(name => {
+      const m = machineMap[name];
+      return `<div class="machine-row">
+        <span class="name">${name}</span>
+        <span class="count">${m.count}件</span>
+        <span class="net ${m.net >= 0 ? 'value pos' : 'value neg'}">${fmtSigned(m.net)}</span>
+      </div>`;
+    }).join('');
+  }
+
+  const ledgerBody = document.getElementById('ledgerBody');
+  const ledgerEmpty = document.getElementById('ledgerEmpty');
+  if(entries.length === 0){
+    ledgerBody.innerHTML = '';
+    ledgerEmpty.style.display = 'block';
+  } else {
+    ledgerEmpty.style.display = 'none';
+    const newestFirst = entries.slice().sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+    ledgerBody.innerHTML = newestFirst.map(e => {
+      const net = e.gain - e.loss;
+      return `<tr>
+        <td>${formatDate(e.date)}</td>
+        <td>${e.machine}</td>
+        <td class="num pos">${e.gain ? '+' + e.gain.toLocaleString() : '-'}</td>
+        <td class="num neg">${e.loss ? '-' + e.loss.toLocaleString() : '-'}</td>
+        <td class="num ${net >= 0 ? 'pos' : 'neg'}">${fmtSigned(net)}</td>
+        <td><button class="btn-del" data-id="${e.id}">×</button></td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+function renderChart(sorted){
+  const W = 320, H = 150, padL = 40, padR = 10, padT = 12, padB = 20;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  let cum = 0;
+  const cumValues = sorted.map(e => { cum += (e.gain - e.loss); return cum; });
+  const n = cumValues.length;
+  const rawMax = Math.max(...cumValues, 0);
+  const rawMin = Math.min(...cumValues, 0);
+  const yMax = Math.max(100, Math.ceil(rawMax * 1.15 / 100) * 100);
+  const yMin = Math.min(-100, Math.floor(rawMin * 1.15 / 100) * 100);
+  const range = yMax - yMin;
+  const xAt = i => padL + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
+  const yAt = v => padT + (1 - (v - yMin) / range) * plotH;
+
+  const parts = [];
+  [yMin, 0, yMax].forEach(gy => {
+    const y = yAt(gy);
+    parts.push(`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="${gy === 0 ? '#5a3a2f' : '#3a1e1f'}" stroke-width="1"/>`);
+    parts.push(`<text x="${padL - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end" font-size="8" fill="#b58e88">${Math.round(gy).toLocaleString()}</text>`);
+  });
+
+  const pathD = cumValues.map((v, i) => `${i === 0 ? 'M' : 'L'}${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' ');
+  parts.push(`<path d="${pathD}" fill="none" stroke="#e0a83c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`);
+
+  cumValues.forEach((v, i) => {
+    const isLast = i === n - 1;
+    parts.push(`<circle cx="${xAt(i).toFixed(1)}" cy="${yAt(v).toFixed(1)}" r="${isLast ? 5 : 3}" fill="${v >= 0 ? '#7fd68a' : '#e2312a'}" ${isLast ? 'stroke="#1c0d10" stroke-width="2"' : ''}/>`);
+  });
+
+  parts.push(`<rect id="ledgerHitzone" x="${padL}" y="0" width="${plotW}" height="${H}" fill="transparent"/>`);
+  parts.push(`<line id="ledgerCrosshair" x1="0" y1="${padT}" x2="0" y2="${padT + plotH}" stroke="#b58e88" stroke-width="1" style="display:none;"/>`);
+
+  const svg = document.getElementById('ledgerChart');
+  svg.innerHTML = parts.join('');
+
+  const tooltip = document.getElementById('ledgerTooltip');
+  const crosshair = document.getElementById('ledgerCrosshair');
+  const hitzone = document.getElementById('ledgerHitzone');
+
+  function showAt(i){
+    const x = xAt(i), y = yAt(cumValues[i]);
+    crosshair.setAttribute('x1', x); crosshair.setAttribute('x2', x);
+    crosshair.style.display = 'block';
+    const rect = svg.getBoundingClientRect();
+    const scale = rect.width / W;
+    tooltip.style.left = (x * scale) + 'px';
+    tooltip.style.top = (y * scale) + 'px';
+    tooltip.innerHTML = `<b>${fmtSigned(cumValues[i])}</b><br>${formatDate(sorted[i].date)} ${sorted[i].machine}`;
+    tooltip.style.display = 'block';
+  }
+  function hide(){
+    crosshair.style.display = 'none';
+    tooltip.style.display = 'none';
+  }
+  function nearestIndex(clientX){
+    const rect = svg.getBoundingClientRect();
+    const scale = rect.width / W;
+    const userX = (clientX - rect.left) / scale;
+    let best = 0, bestDist = Infinity;
+    for(let i = 0; i < n; i++){
+      const d = Math.abs(xAt(i) - userX);
+      if(d < bestDist){ bestDist = d; best = i; }
+    }
+    return best;
+  }
+  hitzone.addEventListener('pointermove', (ev) => showAt(nearestIndex(ev.clientX)));
+  hitzone.addEventListener('pointerdown', (ev) => showAt(nearestIndex(ev.clientX)));
+  svg.addEventListener('pointerleave', hide);
+}
+
+const ledgerMachineSelect = document.getElementById('ledgerMachineSelect');
+const ledgerCustomRow = document.getElementById('ledgerCustomRow');
+ledgerMachineSelect.addEventListener('change', () => {
+  ledgerCustomRow.style.display = ledgerMachineSelect.value === '__custom__' ? 'flex' : 'none';
+});
+
+document.getElementById('ledgerDate').value = new Date().toISOString().slice(0, 10);
+
+document.getElementById('btnLedgerAdd').addEventListener('click', () => {
+  const date = document.getElementById('ledgerDate').value;
+  if(!date){ alert('日付を入力してください'); return; }
+  let machine = ledgerMachineSelect.value;
+  if(machine === '__custom__'){
+    machine = document.getElementById('ledgerMachineCustom').value.trim();
+    if(!machine){ alert('台の名前を入力してください'); return; }
+  }
+  const gain = parseInt(document.getElementById('ledgerGain').value, 10) || 0;
+  const loss = parseInt(document.getElementById('ledgerLoss').value, 10) || 0;
+  if(gain === 0 && loss === 0){ alert('増益額か減収額のどちらかを入力してください'); return; }
+
+  const entries = loadLedger();
+  entries.push({id: Date.now(), date, machine, gain, loss});
+  saveLedger(entries);
+
+  document.getElementById('ledgerGain').value = '';
+  document.getElementById('ledgerLoss').value = '';
+  document.getElementById('ledgerMachineCustom').value = '';
+  render();
+});
+
+document.getElementById('ledgerBody').addEventListener('click', (e) => {
+  const btn = e.target.closest('.btn-del');
+  if(!btn) return;
+  if(!confirm('この記録を削除しますか？')) return;
+  const id = parseInt(btn.dataset.id, 10);
+  const entries = loadLedger().filter(e => e.id !== id);
+  saveLedger(entries);
+  render();
+});
+
+document.getElementById('btnLedgerClearAll').addEventListener('click', () => {
+  if(!confirm('全ての収支記録を削除します。元に戻せません。よろしいですか？')) return;
+  localStorage.removeItem(STORAGE_KEY_LEDGER);
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
