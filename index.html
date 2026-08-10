@@ -348,7 +348,7 @@
     <div class="tenjou-num">
       <span class="val" id="predictedProfitVal" style="font-size:1.9rem;">-</span><span class="unit">円</span>
     </div>
-    <details class="hint-toggle"><summary></summary><p>獲得枚数（AT・ボーナス分の合計） − 投資額を、④やめ時サインの交換率（1メダル10円／20円）で金額換算した目安です。千円未満は切り捨てて表示します。消費した分（G数×3枚）は含めていないため、④の「収支・差枚数」とは別の、換金ベースの簡易的な目安です。</p></details>
+    <details class="hint-toggle"><summary></summary><p>獲得枚数（AT・ボーナス分の合計） − 投資額を、④やめ時サインの交換レート（1メダル5円／10円／20円）で金額換算した目安です。千円未満は切り捨てて表示します。消費した分（G数×3枚）は含めていないため、④の「収支・差枚数」とは別の、換金ベースの簡易的な目安です。</p></details>
   </div>
 
   <div class="card">
@@ -410,8 +410,12 @@
       <input type="number" id="inputInvestmentYen" placeholder="参考：投資額（円）※収支には含めません" step="1000" min="0">
     </div>
     <label class="toggle-row">
-      <input type="checkbox" id="chkMedalRate20">
-      1メダル＝20円で換算（未チェックは1メダル＝10円）
+      1メダルあたりの換算レート：
+      <select id="selMedalRate" style="margin-left:6px;background:#0e0506;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:4px 8px;">
+        <option value="5">5円</option>
+        <option value="10">10円</option>
+        <option value="20">20円</option>
+      </select>
     </label>
     <div class="hint" id="investmentYenInfo"></div>
 
@@ -814,11 +818,13 @@ function loadInvestmentYen(){
 function saveInvestmentYen(v){
   localStorage.setItem(STORAGE_KEY_INVESTMENT_YEN, String(Math.max(0, v)));
 }
+const MEDAL_RATES = [5, 10, 20];
 function loadMedalRate(){
-  return localStorage.getItem(STORAGE_KEY_MEDAL_RATE) === '20' ? 20 : 10;
+  const v = parseInt(localStorage.getItem(STORAGE_KEY_MEDAL_RATE), 10);
+  return MEDAL_RATES.includes(v) ? v : 10;
 }
 function saveMedalRate(rate){
-  localStorage.setItem(STORAGE_KEY_MEDAL_RATE, rate === 20 ? '20' : '10');
+  localStorage.setItem(STORAGE_KEY_MEDAL_RATE, MEDAL_RATES.includes(rate) ? String(rate) : '10');
 }
 function loadInvestmentMedals(){
   return Math.round(loadInvestmentYen() / loadMedalRate());
@@ -1161,9 +1167,9 @@ function render(){
   if(document.activeElement !== inputInvestmentYen){
     inputInvestmentYen.value = loadInvestmentYen() || '';
   }
-  const chkMedalRate20 = document.getElementById('chkMedalRate20');
-  if(document.activeElement !== chkMedalRate20){
-    chkMedalRate20.checked = loadMedalRate() === 20;
+  const selMedalRate = document.getElementById('selMedalRate');
+  if(document.activeElement !== selMedalRate){
+    selMedalRate.value = String(loadMedalRate());
   }
   const medalRate = loadMedalRate();
   document.getElementById('investmentYenInfo').textContent =
@@ -1536,8 +1542,8 @@ document.getElementById('inputInvestmentYen').addEventListener('input', (e) => {
   recomputeBalance();
   render();
 });
-document.getElementById('chkMedalRate20').addEventListener('change', (e) => {
-  saveMedalRate(e.target.checked ? 20 : 10);
+document.getElementById('selMedalRate').addEventListener('change', (e) => {
+  saveMedalRate(parseInt(e.target.value, 10));
   recomputeBalance();
   render();
 });
