@@ -195,6 +195,7 @@
   .toggle-row{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:0.78rem;color:var(--sub);}
   .toggle-row input{width:16px;height:16px;flex:0 0 auto;}
 
+  .tenjou-target-label{text-align:center;font-size:0.85rem;color:var(--red);font-weight:700;margin-bottom:2px;}
   .tenjou-num{display:flex;align-items:baseline;justify-content:center;gap:6px;margin-bottom:10px;}
   .tenjou-num .val{font-size:2.2rem;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums;}
   .tenjou-num .unit{font-size:0.9rem;color:var(--sub);}
@@ -330,12 +331,15 @@
   </div>
 
   <div class="card">
-    <h2>② 天井までの残りゲーム数</h2>
+    <h2>② 次の狙い目まで</h2>
+    <div class="tenjou-target-label" id="tenjouTargetLabel">-</div>
     <div class="tenjou-num">
       <span class="val" id="tenjouRemain">-</span><span class="unit">G</span>
     </div>
     <div class="progress-bar-bg"><div class="progress-bar-fill" id="tenjouBar" style="width:0%"></div></div>
     <div class="tenjou-sub" id="tenjouSub"></div>
+    <div class="best-tag" id="shutterZoneNote" style="display:none;margin-top:10px;"></div>
+    <details class="hint-toggle"><summary></summary><p>あべし数の進行にあわせて、天国ライン(128G)→モードCライン(576G)→モードBライン(896G)→モードA・真の天井の順に、次に超えるべきラインまでの残りゲーム数を表示します。37〜38G・43〜45Gはシャッター演出が出やすい区間としてモードCを示唆します。</p></details>
 
     <div class="benefit-list">
       <div class="benefit-row" id="benefitRow1">
@@ -1007,12 +1011,34 @@ function render(){
   const live = computeLive(currentG, ctx);
   document.getElementById('outOfRangeWarn').style.display = live.outOfRange ? 'block' : 'none';
 
-  const remain = Math.max(0, ctx.tenjouG - currentG);
-  document.getElementById('tenjouRemain').textContent = remain;
-  const progressPct = Math.min(100, (currentG / ctx.tenjouG) * 100);
-  document.getElementById('tenjouBar').style.width = progressPct + '%';
-  document.getElementById('tenjouSub').textContent = `天井: ${ctx.tenjouG}G（${ctx.useSetChange ? '設定変更後の短縮天井' : '通常'}）`;
-  document.getElementById('qsTenjou').textContent = `${remain}G`;
+  const remain = Math.max(0, ctx.tenjouG - currentG); // 真の天井までの残り（他の計算で使用）
+
+  const CHECKPOINTS = [
+    {g: MODE_CEILING.T, label: '天国ライン', short: '天国まで'},
+    {g: MODE_CEILING.C, label: 'モードCライン', short: 'Cまで'},
+    {g: MODE_CEILING.B, label: 'モードBライン', short: 'Bまで'},
+    {g: ctx.tenjouG, label: ctx.useSetChange ? '短縮天井' : 'モードA・真の天井', short: '天井まで'}
+  ];
+  let target = CHECKPOINTS[CHECKPOINTS.length - 1];
+  for(const cp of CHECKPOINTS){
+    if(currentG < cp.g){ target = cp; break; }
+  }
+  const targetRemain = Math.max(0, target.g - currentG);
+  document.getElementById('tenjouTargetLabel').textContent = `次の狙い目：${target.label}（${target.g}G）`;
+  document.getElementById('tenjouRemain').textContent = targetRemain;
+  const targetProgressPct = target.g > 0 ? Math.min(100, (currentG / target.g) * 100) : 0;
+  document.getElementById('tenjouBar').style.width = targetProgressPct + '%';
+  document.getElementById('tenjouSub').textContent = `真の天井: ${ctx.tenjouG}G（${ctx.useSetChange ? '設定変更後の短縮天井' : '通常'}）まで残り${remain}G`;
+  document.getElementById('qsTenjou').textContent = `${target.short}${targetRemain}G`;
+
+  const inShutterZone = (currentG >= 37 && currentG <= 38) || (currentG >= 43 && currentG <= 45);
+  const shutterZoneNote = document.getElementById('shutterZoneNote');
+  if(inShutterZone){
+    shutterZoneNote.style.display = 'block';
+    shutterZoneNote.textContent = '⚡ シャッター演出が出やすい区間（37〜38G・43〜45G）：モードC示唆';
+  } else {
+    shutterZoneNote.style.display = 'none';
+  }
 
   const benefit1Met = currentG >= ctx.tenjouG;
   const benefitRow1 = document.getElementById('benefitRow1');
