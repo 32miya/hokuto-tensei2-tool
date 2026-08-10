@@ -122,6 +122,10 @@
   .hist-row .hist-idx{color:var(--sub);font-size:0.75rem;width:32px;flex-shrink:0;}
   .hist-row .hist-g{font-weight:700;color:var(--text);flex:1;}
   .hist-row .hist-ts{color:var(--sub);font-size:0.72rem;flex-shrink:0;}
+  .hist-mode{
+    font-size:0.68rem;font-weight:700;color:#1c0d10;
+    padding:2px 6px;border-radius:6px;flex-shrink:0;
+  }
   .hist-row .hist-del{
     background:transparent;border:1px solid var(--line);color:var(--red);
     border-radius:6px;width:28px;height:28px;padding:0;font-size:0.9rem;flex-shrink:0;
@@ -1258,9 +1262,13 @@ function render(){
     `;
     histList.innerHTML = history.slice().reverse().map((e, i) => {
       const idx = history.length - 1 - i;
+      const modeBadge = e.mode
+        ? `<span class="hist-mode fill-${e.mode}">${MODE_LABEL[e.mode]} ${Math.round((e.modePct || 0) * 100)}%</span>`
+        : '';
       return `<div class="hist-row">
         <span class="hist-idx">#${idx + 1}</span>
         <span class="hist-g">${e.g}G</span>
+        ${modeBadge}
         <span class="hist-ts">${formatTs(e.ts)}</span>
         <button class="hist-del" data-idx="${idx}">×</button>
         <div class="hist-payout-wrap">
@@ -1399,7 +1407,7 @@ function renderChart(history){
     const scale = rect.width / W;
     tooltip.style.left = (x * scale) + 'px';
     tooltip.style.top = (y * scale) + 'px';
-    tooltip.innerHTML = `<b>${e.g}G</b>${e.payout != null ? ` / ${e.payout}枚` : ''}<br>#${i + 1} ${formatTs(e.ts)}`;
+    tooltip.innerHTML = `<b>${e.g}G</b>${e.payout != null ? ` / ${e.payout}枚` : ''}${e.mode ? ` / ${MODE_LABEL[e.mode]}` : ''}<br>#${i + 1} ${formatTs(e.ts)}`;
     tooltip.style.display = 'block';
   }
   function hide(){
@@ -1524,8 +1532,17 @@ function confirmPayoutModal(){
   if(currentG < 1){ closePayoutModal(); return; }
   const payoutRaw = parseInt(modalPayoutInput.value, 10);
   const payout = Number.isFinite(payoutRaw) ? payoutRaw : null;
+
+  // 登録の瞬間に③が推定していたモードを、履歴にそのまま記録しておく。
+  const ctxAtRegister = activeData();
+  const liveAtRegister = computeLive(currentG, ctxAtRegister);
+  let modeAtRegister = null, modeAtRegisterPct = 0;
+  for(const m of MODES){
+    if(liveAtRegister.post[m] > modeAtRegisterPct){ modeAtRegisterPct = liveAtRegister.post[m]; modeAtRegister = m; }
+  }
+
   const history = loadHistory();
-  history.push({g: currentG, ts: Date.now(), payout});
+  history.push({g: currentG, ts: Date.now(), payout, mode: modeAtRegister, modePct: modeAtRegisterPct});
   saveHistory(history);
   saveCurrentG(0);
   saveTanpatsu(0);
