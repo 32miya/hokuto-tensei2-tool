@@ -209,6 +209,8 @@
   .tenjou-target-label{text-align:center;font-size:0.85rem;color:var(--red);font-weight:700;margin-bottom:2px;}
   .tenjou-num{display:flex;align-items:baseline;justify-content:center;gap:6px;margin-bottom:10px;}
   .tenjou-num .val{font-size:2.2rem;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums;}
+  .tenjou-num .val.pos{color:#7fd68a;}
+  .tenjou-num .val.neg{color:var(--red);}
   .tenjou-num .unit{font-size:0.9rem;color:var(--sub);}
   .progress-bar-bg{background:#0e0506;border:1px solid var(--line);border-radius:8px;height:16px;overflow:hidden;}
   .progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--gold));transition:width .3s ease;}
@@ -339,6 +341,14 @@
       </label>
       <details class="hint-toggle"><summary></summary><p>電源の入れ直し（リセット）だけでは天井G数・内部状態・有利区間は引き継がれ、短縮されません。短縮天井が働くのは実際に設定変更があった場合のみです。「今日の1G目から打っている」というだけではチェックしないでください。短縮天井は最初の1サイクルのみ有効なため、あべし成立を記録すると自動でチェックが外れ、通常の天井に戻ります。</p></details>
     </details>
+  </div>
+
+  <div class="card">
+    <h2>予測収支（換金額の目安）</h2>
+    <div class="tenjou-num">
+      <span class="val" id="predictedProfitVal" style="font-size:1.9rem;">-</span><span class="unit">円</span>
+    </div>
+    <details class="hint-toggle"><summary></summary><p>獲得枚数（AT・ボーナス分の合計） − 投資額を、④やめ時サインの交換率（1メダル10円／20円）で金額換算した目安です。千円未満は切り捨てて表示します。消費した分（G数×3枚）は含めていないため、④の「収支・差枚数」とは別の、換金ベースの簡易的な目安です。</p></details>
   </div>
 
   <div class="card">
@@ -1229,6 +1239,12 @@ function render(){
   document.getElementById('yameExpected').textContent =
     `続行した場合の残り期待ゲーム数の目安: 約${Math.round(expG)}G（攻略サイト情報では、⑥第1区間48G付近でノーヒットの場合のヤメ目安として期待値104〜105%程度という情報もあります）`;
   const totalPayoutSoFar = payoutSamples.reduce((a, b) => a + b, 0);
+
+  const predictedProfitYen = Math.trunc((totalPayoutSoFar * loadMedalRate() - loadInvestmentYen()) / 1000) * 1000;
+  const predictedProfitEl = document.getElementById('predictedProfitVal');
+  predictedProfitEl.textContent = `${predictedProfitYen >= 0 ? '+' : ''}${predictedProfitYen.toLocaleString()}`;
+  predictedProfitEl.className = 'val ' + (predictedProfitYen > 0 ? 'pos' : predictedProfitYen < 0 ? 'neg' : '');
+
   const koyakuAdjustSoFar = loadKoyaku();
   document.getElementById('balanceInfo').innerHTML =
     `現在の収支: <b>${balance >= 0 ? '+' : ''}${balance}枚</b>（獲得${totalPayoutSoFar}枚` +
