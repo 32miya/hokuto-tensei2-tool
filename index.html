@@ -397,7 +397,7 @@
     <div class="best-tag" id="nextHotRange" style="margin-top:10px;display:block;"></div>
 
     <div class="row" style="margin-top:12px;">
-      <input type="number" id="inputInvestmentYen" placeholder="投資額（円）" step="1000" min="0">
+      <input type="number" id="inputInvestmentYen" placeholder="参考：投資額（円）※収支には含めません" step="1000" min="0">
     </div>
     <label class="toggle-row">
       <input type="checkbox" id="chkMedalRate20">
@@ -406,12 +406,12 @@
     <div class="hint" id="investmentYenInfo"></div>
 
     <div class="row" style="margin-top:10px;">
-      <input type="number" id="inputBalance" placeholder="現在の差枚数（マイナスも入力可）">
+      <input type="number" id="inputBalance" placeholder="現在の収支・差枚数（マイナスも入力可）">
     </div>
     <div class="hint" id="balanceInfo"></div>
     <details class="hint-toggle">
       <summary></summary>
-      <p>所有枚数 = 投資額（円→メダル換算） + 獲得枚数合計 − （①「現在のG数」×3枚）で自動計算します（G数未登録の場合はあべし履歴からの概算G数を使用）。投資額を追加した時・G数の登録時・獲得枚数の入力/編集時に再計算されます。差枚数欄は手動で書き換えても構いません。</p>
+      <p>収支 = 獲得枚数合計 − （①「現在のG数」×3枚）で自動計算します（G数未登録の場合はあべし履歴からの概算G数を使用）。投資額はここには含みません。入金してもまだ使っていないだけで、勝ち負けが変わるわけではないためです（含めると入金するほど収支が良く見えてしまいます）。投資額はあくまで参考表示・所持枚数の確認ウィンドウでの逆算用です。G数の登録時・獲得枚数の入力/編集時に再計算されます。収支欄は手動で書き換えても構いません。</p>
       <p>576G＝モードC消滅、896G＝モードB消滅（以降モードA確定）という実際の壁に沿って「やめ時濃厚」ゾーンを判定し、天井が十分近づいたら「天井狙い推奨」に切り替えます（獲得枚数の記録があればそこから計算した平均獲得枚数、なければ天井の80%地点を目安に使用）。差枚数が大きくマイナスの場合はそれより早く「やめ時濃厚」を出します。</p>
     </details>
   </div>
@@ -784,15 +784,17 @@ function saveTotalG(g){
   if(g === null){ localStorage.removeItem(STORAGE_KEY_TOTALG); }
   else { localStorage.setItem(STORAGE_KEY_TOTALG, String(g)); }
 }
-// 所有枚数 = 投資額（手動入力） + 獲得枚数の合計（AT/ボーナス） + 子役獲得枚数の調整分（手動）
-//          − 消費枚数（①の「現在のG数」×3枚。未登録なら履歴からの概算G数を使う）。
+// 収支（差枚数） = 獲得枚数の合計（AT/ボーナス） + 子役獲得枚数の調整分（手動）
+//               − 消費枚数（①の「現在のG数」×3枚。未登録なら履歴からの概算G数を使う）。
+// 投資額はここには含めない。投資して所持枚数が増えても、まだ使っていないだけで
+// 勝ち負けが変わるわけではないため（含めると入金するほど収支が良く見えてしまう）。
 function recomputeBalance(){
   const history = loadHistory();
   const totalPayout = history.reduce((sum, e) => sum + (e.payout || 0), 0);
   const manualTotalG = loadTotalG();
   const estimatedTotalG = history.reduce((sum, e) => sum + e.g, 0) + loadCurrentG();
   const totalG = manualTotalG || estimatedTotalG;
-  saveBalance(loadInvestmentMedals() + totalPayout + loadKoyaku() - totalG * COST_PER_GAME);
+  saveBalance(totalPayout + loadKoyaku() - totalG * COST_PER_GAME);
 }
 function loadInvestmentYen(){
   const raw = localStorage.getItem(STORAGE_KEY_INVESTMENT_YEN);
@@ -824,14 +826,16 @@ function addKoyaku(delta){
   if(!Number.isFinite(delta) || delta === 0) return;
   localStorage.setItem(STORAGE_KEY_KOYAKU, String(loadKoyaku() + delta));
 }
-// 実機で確認した「現在の所持枚数」と一致するように、子役調整分を逆算してセットする。
+// 実機で確認した「現在の所持枚数」（＝投資分も含む実際のクレジット表示）から
+// 投資額を差し引いて収支ベースに揃えたうえで、子役調整分を逆算してセットする。
 function calibrateKoyakuToHoldings(targetHoldings){
   const history = loadHistory();
   const totalPayout = history.reduce((sum, e) => sum + (e.payout || 0), 0);
   const manualTotalG = loadTotalG();
   const estimatedTotalG = history.reduce((sum, e) => sum + e.g, 0) + loadCurrentG();
   const totalG = manualTotalG || estimatedTotalG;
-  const neededKoyaku = targetHoldings - loadInvestment() - totalPayout + totalG * COST_PER_GAME;
+  const targetBalance = targetHoldings - loadInvestmentMedals();
+  const neededKoyaku = targetBalance - totalPayout + totalG * COST_PER_GAME;
   localStorage.setItem(STORAGE_KEY_KOYAKU, String(neededKoyaku));
 }
 function loadSessions(){
@@ -1227,9 +1231,10 @@ function render(){
   const totalPayoutSoFar = payoutSamples.reduce((a, b) => a + b, 0);
   const koyakuAdjustSoFar = loadKoyaku();
   document.getElementById('balanceInfo').innerHTML =
-    `現在の所有枚数: <b>${balance >= 0 ? '+' : ''}${balance}枚</b>（投資${loadInvestmentYen().toLocaleString()}円=${loadInvestmentMedals()}枚 ＋ 獲得${totalPayoutSoFar}枚` +
+    `現在の収支: <b>${balance >= 0 ? '+' : ''}${balance}枚</b>（獲得${totalPayoutSoFar}枚` +
     (koyakuAdjustSoFar !== 0 ? ` ＋ 子役調整${koyakuAdjustSoFar >= 0 ? '+' : ''}${koyakuAdjustSoFar}枚` : '') +
     ` − 消費${(loadTotalG() || (history.reduce((s,e)=>s+e.g,0)+currentG)) * COST_PER_GAME}枚）<br>` +
+    `参考：投資額 ${loadInvestmentYen().toLocaleString()}円（${loadInvestmentMedals()}枚相当）※収支には含めていません<br>` +
     `期待当選までの追加投資目安: 約${investToExpected}枚（${COST_PER_GAME}枚/G想定）<br>` +
     `天井到達までの追加投資目安（最大）: 約${investToTenjou}枚` +
     (avgPayout != null ? `<br>これまでの平均獲得枚数: 約${Math.round(avgPayout)}枚（${payoutSamples.length}件）` : '');
