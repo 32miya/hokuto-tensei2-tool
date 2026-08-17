@@ -152,17 +152,13 @@
       <input type="date" id="ledgerDate">
     </div>
     <div class="row" style="margin-top:8px;">
-      <select id="ledgerMachineSelect">
-        <option value="北斗の拳">北斗の拳</option>
-        <option value="花火">花火</option>
-        <option value="ジャグラー">ジャグラー</option>
-        <option value="吉宗">吉宗</option>
-        <option value="__custom__">その他（自由入力）</option>
-      </select>
+      <select id="ledgerMachineSelect"></select>
     </div>
     <div class="row" id="ledgerCustomRow" style="display:none;margin-top:8px;">
       <input type="text" id="ledgerMachineCustom" placeholder="台の名前を入力">
     </div>
+    <div class="hint">自由入力した台の名前は、次回以降プルダウンの選択肢に自動で追加されます。不要になった台名は下の「登録済みの台名」から削除できます。</div>
+    <div class="machine-list" id="customMachineList" style="margin-top:8px;"></div>
     <div class="row" style="margin-top:8px;">
       <input type="number" id="ledgerGain" placeholder="増益額（円 or 枚）" min="0">
       <input type="number" id="ledgerLoss" placeholder="減収額（円 or 枚）" min="0">
@@ -190,6 +186,62 @@
 
 <script>
 const STORAGE_KEY_LEDGER = 'pachislot_ledger_v1';
+const STORAGE_KEY_CUSTOM_MACHINES = 'pachislot_ledger_custom_machines_v1';
+const BUILT_IN_MACHINES = ['北斗の拳', '花火', 'ジャグラー', '吉宗'];
+
+function loadCustomMachines(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_MACHINES);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+function saveCustomMachines(list){
+  localStorage.setItem(STORAGE_KEY_CUSTOM_MACHINES, JSON.stringify(list));
+}
+function addCustomMachine(name){
+  if(!name || BUILT_IN_MACHINES.includes(name)) return;
+  const list = loadCustomMachines();
+  if(!list.includes(name)){
+    list.push(name);
+    saveCustomMachines(list);
+  }
+}
+function removeCustomMachine(name){
+  saveCustomMachines(loadCustomMachines().filter(m => m !== name));
+}
+function populateMachineSelect(){
+  const sel = document.getElementById('ledgerMachineSelect');
+  const prevValue = sel.value;
+  sel.innerHTML = '';
+  const allNames = [...BUILT_IN_MACHINES, ...loadCustomMachines()];
+  allNames.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+  const customOpt = document.createElement('option');
+  customOpt.value = '__custom__';
+  customOpt.textContent = 'その他（自由入力）';
+  sel.appendChild(customOpt);
+  if(allNames.includes(prevValue) || prevValue === '__custom__'){
+    sel.value = prevValue;
+  }
+}
+function renderCustomMachineList(){
+  const list = loadCustomMachines();
+  const el = document.getElementById('customMachineList');
+  if(list.length === 0){
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = list.map(name => `
+    <div class="machine-row">
+      <span class="name">${name}</span>
+      <button class="btn-del" data-machine="${name}">×</button>
+    </div>
+  `).join('');
+}
 
 function loadLedger(){
   try{
@@ -211,6 +263,9 @@ function formatDate(dateStr){
 }
 
 function render(){
+  populateMachineSelect();
+  renderCustomMachineList();
+
   const entries = loadLedger();
   const sorted = entries.slice().sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
 
@@ -368,6 +423,7 @@ document.getElementById('btnLedgerAdd').addEventListener('click', () => {
   if(machine === '__custom__'){
     machine = document.getElementById('ledgerMachineCustom').value.trim();
     if(!machine){ alert('台の名前を入力してください'); return; }
+    addCustomMachine(machine);
   }
   const gain = parseInt(document.getElementById('ledgerGain').value, 10) || 0;
   const loss = parseInt(document.getElementById('ledgerLoss').value, 10) || 0;
@@ -390,6 +446,15 @@ document.getElementById('ledgerBody').addEventListener('click', (e) => {
   const id = parseInt(btn.dataset.id, 10);
   const entries = loadLedger().filter(e => e.id !== id);
   saveLedger(entries);
+  render();
+});
+
+document.getElementById('customMachineList').addEventListener('click', (e) => {
+  const btn = e.target.closest('.btn-del');
+  if(!btn) return;
+  const name = btn.dataset.machine;
+  if(!confirm(`「${name}」を選択肢から削除しますか？（過去の記録は残ります）`)) return;
+  removeCustomMachine(name);
   render();
 });
 
